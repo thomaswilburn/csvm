@@ -7,46 +7,61 @@ export class Reference {
     this.rows = 1;
     this.data = [];
     this.address = "";
-    if (address) this.setAddress(address);
+    if (address) {
+      this.setAddress(address);
+    }
   }
 
   setAddress(address) {
-    var re = /(?:(?<sheet>\w+)!)?(?<column>[a-z]+)(?<row>\d+)(?:\:(?<rangeColumn>[a-z]+)(?<rangeRow>\d+))?/i;
-    var match = address.match(re);
-    if (!match) throw new Error(`Unable to parse cell reference ${address}`);
-    var { groups } = match;
-    if (!groups.column || !groups.row) throw new Error(`Missing cell reference coordinate in ${address}`);
-    if (groups.sheet) {
-      this.sheet = groups.sheet
-    };
-    this.column = this.convertColumn(groups.column);
-    this.row = Number(groups.row);
-    this.columns = 1;
-    this.rows = 1;
-    if (groups.rangeRow || groups.rangeColumn) {
-      if (!groups.rangeRow || !groups.rangeColumn) throw new Error(`Mangled range extent in ${address}`);
-      var c = this.convertColumn(groups.rangeColumn);
-      var r = Number(groups.rangeRow);
-      if (c < this.column) {
-        [this.column, c] = [c, this.column];
-      }
-      if (r < this.row) {
-        [this.row, r] = [r, this.row];
-      }
-      this.columns = c - this.column + 1;
-      this.rows = r - this.row + 1;
+    address = address.trim();
+    var sheetRE = /^(?:(?<sheet>\w+)!)?/i;
+    var sheetMatch = address.match(sheetRE);
+    if (sheetMatch && sheetMatch.groups.sheet) {
+      address.replace(sheetRE, "");
+      this.sheet = sheetMatch.groups.sheet;
     }
-    this.address = address;
+    var isR1C1 = /^(r\d+c\d+|r\[-?\d+\]c\[-?\d+\])$/i;
+    var pair = address.split(":");
+    if (pair.length > 1) {
+      var typed = pair.map(p => isR1C1.test(p));
+      if (typed[0] != typed[1]) throw new Error(`Cannot mix A1 and R1C1 notation in address: ${address}`);
+    }
+    var parsed = pair.map(c => isR1C1.test(c) ? this.parseR1C1(c) : this.parseA1(c));
+    var [ a, b ] = parsed;
+    this.row = a.row;
+    this.column = a.column;
+    if (b) {
+      this.column = Math.min(a.column, b.column);
+      this.row = Math.min(a.row, b.row);
+      this.columns += Math.max(a.column, b.column) - this.column;
+      this.rows += Math.max(a.row, b.row) - this.row;
+    }
     return this;
   }
 
-  parseR1C1(r1c1) {
-    var re = /r\[(?<rows>-?\d+)\]c\[(?<columns>-?\d+)\]/i;
-    var match = r1c1.match(re);
-    if (!match) throw new Error(`Unable to parse R1C1 reference ${r1c1}`);
-    this.column += Number(match.groups.columns);
-    this.row += Number(match.groups.rows);
-    return this;
+  parseA1(cell) {
+    var re = /^(?<column>[a-z]+)(?<row>\d+)$/i;
+    var match = cell.match(re);
+    if (!match) throw new Error(`Couldn't parse A1-style cell address ${cell}`);
+    var { column, row } = match.groups;
+    column = this.convertColumn(column);
+    row = Number(row);
+    return { column, row };
+  }
+
+  parseR1C1(cell) {
+    var isRelative = cell.includes("[");
+    var re = /^r\[?(?<row>-?\d+)\]?c\[?(?<column>-?\d+)\]?$/i
+    var match = cell.match(re);
+    if (!match) throw new Error(`Couldn't parse R1C1-style cell address ${cell}`);
+    var { column, row } = match.groups;
+    column = Number(column);
+    row = Number(row);
+    if (isRelative) {
+      column += this.column;
+      row += this.row;
+    }
+    return { column, row };
   }
 
   convertColumn(column) {
@@ -61,52 +76,51 @@ export class Reference {
     return result;
   }
 
-  forEach(fn) {
-    for (var r = this.row; r < this.row + this.rows; r++) {
-      for (var c = this.column; c < this.column + this.columns; c++) {
-        fn(c, r);
+  *[Symbol.iterator]() {
+    for (var y = 1; y <= this.rows; y++) {
+      for (var x = 1; x <= this.columns; x++) {
+        var row = y - 1 + this.row;
+        var column = x - 1 + this.column;
+        yield { row, column, x, y };
       }
     }
   }
 
 }
 
-export class Range extends Array {
+export class Range {
   constructor(width = 1, height = 1) {
-    super(width * height);
     this.columns = width;
     this.rows = height;
     this.protected = new Set();
+    this.data = new Map();
   }
 
-  cellToIndex(c, r) {
-    if (c > this.columns) return undefined;
-    if (r > this.rows) return undefined;
-    var x = c - 1;
-    var y = r - 1;
-    return x + (y * this.columns);
+  key(c, r) {
+    return c + ":" + r;
   }
 
-  indexToCell(index) {
-    var c = (index % this.columns) + 1;
-    var r = ((index / this.columns) | 0) + 1
-    return [c, r];
+  cell(c, r, v) {
+    // for now, you can ask for a range outside the sheet, you just won't get anything
+    if (c > this.columns) return undefined; //throw new Error("Out of bounds error");
+    if (r > this.rows) this.rows = r;
+    var key = this.key(c, r);
+    if (typeof v == "undefined") {
+      return this.data.get(key);
+    } else {
+      this.data.set(key, v);
+    }
   }
 
-  getCell(c, r) {
-    var i = this.cellToIndex(c, r);
-    return this[i];
-  }
-
-  setCell(c, r, v) {
-    var i = this.cellToIndex(c, r);
-    this[i] = v;
-  }
-
-  eachCell(fn) {
-    for (var i = 0; i < this.length; i++) {
-      var [c, r] = this.indexToCell(i);
-      fn(c, r, this[i]);
+  *[Symbol.iterator]() {
+    for (var r = 1; r <= this.rows; r++) {
+      for (var c = 1; c <= this.columns; c++) {
+        yield {
+          column: c,
+          row: r,
+          value: this.data.get(this.key(c, r))
+        };
+      }
     }
   }
 
@@ -122,12 +136,28 @@ export class Range extends Array {
       ref = new Reference(ref);
     }
     var data = [];
-    ref.forEach((c, r) => data.push(this.getCell(c, r)));
-    var r = Range.from(data);
-    r.columns = ref.columns;
-    r.rows = ref.rows;
-    r.reference = ref;
-    return r;
+    var copy = new Range(ref.columns, ref.rows);
+    for (var cell of ref) {
+      copy.cell(cell.x, cell.y, this.cell(cell.column, cell.row));
+    }
+    return copy;
+  }
+
+  values(data) {
+    if (data) {
+      data.forEach((value, index) => {
+        var c = (index % this.columns) + 1;
+        var r = Math.floor(index / this.columns) + 1;
+        this.cell(c, r, value);
+      });
+      return this;
+    } else {
+      data = [];
+      for (var cell of this) {
+        data.push(cell.value);
+      }
+      return data;
+    }
   }
 
   /**
@@ -147,32 +177,33 @@ export class Range extends Array {
       ref = this.selectAll();
     }
     if (!(data instanceof Range)) {
-      data = Range.from(data);
-      data.columns = ref.columns;
-      data.rows = ref.rows;
+      var values = data;
+      data = new Range(ref.columns, ref.rows);
+      data.values(values);
     }
-    for (var r = 0; r < ref.rows; r++) {
-      for (var c = 0; c < ref.columns; c++) {
-        var v = data.getCell(c + 1, r + 1);
-        if (special) {
-          var over = this.getCell(c + ref.column, r + ref.row);
-          v = special(over, v);
-        }
-        this.setCell(c + ref.column, r + ref.row, v);
+
+    for (var { column, row, x, y } of ref) {
+      var v = data.cell(x, y);
+      if (special) {
+        var existing = this.cell(column, row);
+        v = special(existing, v);
       }
+      this.cell(column, row, v);
     }
   }
 
   print() {
     console.log(`${this.reference && this.reference.address || "Range"} (${this.columns}x${this.rows})`);
-    var columnWidths = new Array(this.columns).fill(1);
-    for (var i = 0; i < this.length; i++) {
-      var c = i % this.columns;
-      var len = String(this[i] || "").length;
-      if (len > columnWidths[c]) columnWidths[c] = len;
+    var data = this.values();
+    var rows = [];
+    for (var i = 0; i < data.length; i += this.columns) {
+      rows.push(data.slice(i, i + this.columns).map(v => typeof v == "undefined" ? "" : String(v)));
     }
-    for (var i = 0; i < this.length; i += this.columns) {
-      var row = this.slice(i, i + this.columns);
+    var columnWidths = new Array(this.columns).fill(0).map((a, i) => {
+      return Math.max(...rows.map(r => r[i].length))
+    });
+    for (var i = 0; i < data.length; i += this.columns) {
+      var row = data.slice(i, i + this.columns);
       var out = [];
       for (var c = 0; c < this.columns; c++) {
         out.push(String(row[c] || "").padStart(columnWidths[c], " "));
@@ -200,16 +231,16 @@ export class Sheet extends Range {
     if (typeof ref == "string") {
       ref = new Reference(ref);
     }
-    ref.forEach((c, r) => {
-      var i = this.cellToIndex(c, r);
-      this.protected[protect ? "add" : "delete"](i);
-    });
+    for (var { column, row } of ref) {
+      var k = this.key(column, row);
+      this.protected[protect ? "add" : "delete"](k);
+    };
   }
 
-  setCell(c, r, v) {
-    var i = this.cellToIndex(c, r);
-    if (this.protected.has(i)) return;
-    this[i] = v;
+  cell(c, r, v) {
+    var k = this.key(c, r);
+    if (v && this.protected.has(k)) return;
+    return super.cell(c, r, v);
   }
 }
 
@@ -222,21 +253,20 @@ s.setProtected("A1:C1");
 
 s.print();
 
-var r = s.copy("B2:D3");
+var r = s.copy(new Reference("A1:C2").setAddress("R[1]C[1]"));
 r.print();
 
-var r2 = Range.from([1, 2, 3, 4]);
-r2.rows = r2.columns = 2;
+var r2 = new Range(2, 2).values([1, 2, 3, 4]);
 r2 = r2.copy();
 r2.print();
 
-r.paste(r2, (a, b) => a * b);
+r.paste(r2, (a, b) => a && b && a * b);
 r.print();
 
 s.paste(r, "A1:B2");
 s.print();
 
-s.paste(r2, "B2:C3");
+s.paste(r2, new Reference("A1:B2").setAddress("R[1]C[1]"));
 s.print();
-s.paste(r2, "B2:C3", (a, b) => a * b);
+s.paste(r2, "B2:C3", (a, b) => a && b && a * b);
 s.print();
