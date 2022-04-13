@@ -84,7 +84,6 @@ TODO
 
 - Think of a label syntax?
 - Get the CPU up and running, with other sheets added to it if not functional.
-- Write a CSV loader, get the whole thing running in the browser
 - Build I/O sheets
   - console
   - graphics

@@ -23,13 +23,12 @@ export class CSVM {
     // create the CPU sheet
     var cpu = new Sheet("cpu", 8, 4);
     // define the first row - columns, rows, PC column, PC row, clock
-    cpu.paste([8, 4, 1, 1, Date.now()], "R1C1:R1C8");
+    cpu.paste([8, 4, 1, 2, Date.now()], "R1C1:R1C8");
     // add I/O sheets
     // these should subclass Sheet, typically
     var stdout = new Sheet("stdout", 1, 1);
     // create the program sheet
-    // TODO: load data for this sheet from the program
-    var [ sentinel, width ] = program.shift();
+    var [ sentinel, width ] = program[0];
     var data = new Sheet("data", width, program.length);
     data.values(program);
     this.sheets = { cpu, data, stdout };
