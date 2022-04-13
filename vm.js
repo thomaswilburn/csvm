@@ -12,11 +12,20 @@ const KEYS = {
 const FRAME_BUDGET = 4;
 
 const instructions = `
-copy
+clear copy 
 `.trim().split(/\s+/);
 
+console.table(Object.fromEntries(instructions.map((op, i) => [op, i])));
+
+const DEFAULTS = {
+  verbose: false
+};
+
+var tick = global.process ? global.process.nextTick : global.requestAnimationFrame;
+
 export class CSVM {
-  constructor(program) {
+  constructor(program, options = {}) {
+    this.options = { ...DEFAULTS, ...options };
     // bind some methods
     this.step = this.step.bind(this);
     this.copyTransform = this.copyTransform.bind(this);
@@ -29,8 +38,12 @@ export class CSVM {
     var stdout = new Sheet("stdout", 1, 1);
     // create the program sheet
     var [ sentinel, width ] = program[0];
+    if (sentinel != "csvm" || typeof width != "number") throw new Error("Program is missing CSVM metadata");
     var data = new Sheet("data", width, program.length);
-    data.values(program);
+    data.grid(program);
+    if (this.options.verbose) {
+      console.log(`Program loaded, ${data.columns} columns and ${data.rows} rows`);
+    }
     this.sheets = { cpu, data, stdout };
     // start execution
     this.step();
@@ -45,6 +58,7 @@ export class CSVM {
     if (typeof cellValue == "string" && cellValue[0] == "=") {
       var address = cellValue.slice(1);
       var ref = Reference.at(column, row).setAddress(address);
+      if (!ref.sheet) ref.sheet = "data";
       return ref;
     }
     return cellValue;
@@ -53,7 +67,6 @@ export class CSVM {
   // TODO: this should probably loop as many times as it can in a given frame budget, say 4ms?
   step() {
     var { cpu, data } = this.sheets;
-    data.print();
     var frame = Date.now();
     while (Date.now() < frame + FRAME_BUDGET) {
       // set the clock
@@ -61,10 +74,14 @@ export class CSVM {
       // get the current program counter directly
       var pcc = cpu.data.get(KEYS.PC_COLUMN);
       var pcr = cpu.data.get(KEYS.PC_ROW);
-      var instruction = data.cell(pcc, pcr);
-      if (!instruction) return this.exit(pcc, pcr);
-      var method = this[instruction];
-      if (!method) throw new Error(`No instruction matching opcode ${instruction}`);
+      var op = data.cell(pcc, pcr);
+      if (!op) return this.exit(pcc, pcr);
+      if (typeof op == "number") {
+        op = instructions[op];
+      }
+      if (!instructions.includes(op)) throw new Error(`Unknown instruction "${op}"`);
+      var method = this[op];
+      if (!method) throw new Error(`Opcode "${op}" not implemented`);
       var paramRef = Reference.at(pcc + 1, pcr, method.length);
       var params = data.copy(paramRef, this.copyTransform);
       var jumped = method.call(this, ...params.values());
@@ -75,26 +92,41 @@ export class CSVM {
     }
     // TODO: run any I/O processes at the end of execution
     // TODO: set rAF for the next step()
+    tick(this.step);
   }
 
   exit(column, row) {
     // any cleanup goes here
     console.log(`Program completed at R${row}C${column}`);
-    console.log("CPU memory dump follows:");
-    this.sheets.cpu.print();
+    if (this.options.verbose) {
+      console.log("CPU memory dump follows:");
+      this.sheets.cpu.print();
+    }
+  }
+
+  dereference(value, bounds = new Reference()) {
+    var data;
+    if (value instanceof Reference) {
+      var sheet = this.sheets[value.sheet];
+      data = sheet.copy(value);
+      data.name = "deref";
+    } else {
+      data = new Array(bounds.columns * bounds.rows).fill(value);
+    }
+    return data;
   }
 
   copy(from, to) {
-    var data;
-    if (from instanceof Reference) {
-      var sheet = this.sheets[from.sheet || "data"];
-      data = sheet.copy(from);
-      data.name = "from";
-    } else {
-      data = new Array(to.columns * to.rows).fill(from);
-    }
+    var data = this.dereference(from, to);
     var dest = this.sheets[to.sheet || "data"];
+    if (this.options.verbose) console.log(`copy ${from} ${to}`);
     dest.paste(data, to);
-    console.log(`copy ${from} ${to}`);
+  }
+
+  clear(location) {
+    if (!(location instanceof Reference)) throw new Error(`Expected reference, got value "${location}"`);
+    var dest = this.sheets[location.sheet];
+    if (this.options.verbose) console.log(`clear ${location}`)
+    dest.clear(location);
   }
 }

@@ -4,7 +4,8 @@ export class Range {
   constructor(width = 1, height = 1) {
     this.columns = width;
     this.rows = height;
-    this.protected = new Set();
+    // Map may seem inefficient but it's better for sparse data
+    // It also plays nice with 1-indexed rows/columns
     this.data = new Map();
   }
 
@@ -19,12 +20,12 @@ export class Range {
   cell(c, r, v) {
     // for now, you can ask for a range outside the sheet, you just won't get anything
     if (c > this.columns) return undefined; //throw new Error("Out of bounds error");
-    if (r > this.rows) this.rows = r;
     var key = this.key(c, r);
     if (typeof v == "undefined") {
       return this.data.get(key);
     } else {
       this.data.set(key, v);
+      if (r > this.rows) this.rows = r;
     }
   }
 
@@ -42,28 +43,51 @@ export class Range {
     }
   }
 
+  /**
+   * Gets or sets data as a flat array
+   */
   values(data) {
     if (data) {
+      this.data = new Map();
       // read 2D arrays as individual rows
-      if (data[0] instanceof Array) {
-        for (var i = 0; i < data.length; i++) {
-          for (var j = 0; j < data[i].length; j++) {
-            this.cell(j + 1, i + 1, data[i][j]);
-          }
-        }
-      } else {
-        var index = 0;
-        for (var value of data) {
-          var c = (index % this.columns) + 1;
-          var r = Math.floor(index / this.columns) + 1;
-          this.cell(c, r, value);
-          index++;
-        }
+      var index = 0;
+      for (var value of data) {
+        var c = (index % this.columns) + 1;
+        var r = Math.floor(index / this.columns) + 1;
+        this.cell(c, r, value);
+        index++;
       }
       return this;
     } else {
       data = [...this].map(cell => cell.value);
       return data;
+    }
+  }
+
+  /**
+   * Gets or sets data as a 2D array of arrays
+   * Useful because some inputs (e.g., parsed CSV) may have truncated rows
+   * values() would require them to be padded to full length
+   */
+  grid(data) {
+    if (data) {
+      this.data = new Map();
+      var r = 1;
+      for (var row of data) {
+        var c = 1;
+        for (var cell of row) {
+          this.cell(c++, r, cell);
+        }
+        r++;
+      }
+      return this;
+    } else {
+      data = this.values();
+      var grid = [];
+      for (var i = 0; i < data.length; i += this.columns) {
+        grid.push(data.slice(i, i + this.columns));
+      }
+      return grid;
     }
   }
 
@@ -120,21 +144,29 @@ export class Range {
     }
   }
 
+  clear(ref) {
+    if (typeof ref == "string") {
+      ref = new Reference(ref);
+    }
+    for (var { column, row } of ref) {
+      var key = this.key(column, row);
+      this.data.delete(key);
+    }
+  }
+
   print() {
     console.log(`${this.reference && this.reference.address || "Range"} (${this.columns}x${this.rows})`);
-    var data = this.values();
-    var rows = [];
-    for (var i = 0; i < data.length; i += this.columns) {
-      rows.push(data.slice(i, i + this.columns).map(v => typeof v == "undefined" ? "" : String(v)));
-    }
+    var rows = this.grid().map(row => row.map(v => typeof v == "undefined" ? " " : String(v)));
+    // in browsers, just use the built-in table
+    if (global.document) return console.table(rows);
+    // in Node, render our own, more compact version
     var columnWidths = new Array(this.columns).fill(0).map((a, i) => {
       return Math.max(...rows.map(r => r[i].length))
     });
-    for (var i = 0; i < data.length; i += this.columns) {
-      var row = data.slice(i, i + this.columns);
+    for (var row of rows) {
       var out = [];
       for (var c = 0; c < this.columns; c++) {
-        out.push(String(row[c] || "").padStart(columnWidths[c], " "));
+        out.push(row[c].padStart(columnWidths[c], " "));
       }
       console.log(`[ ${out.join(" | ")} ]`);
     }

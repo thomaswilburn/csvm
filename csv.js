@@ -7,13 +7,13 @@ function cast(value) {
   return value;
 }
 
-var defaults = {
+const DEFAULTS = {
   quote: `"`,
   separator: `,`,
   ending: `\n`
 };
 
-export default function parse(text, options) {
+export default function parse(text, options = {}) {
   text = text.trim();
   var quoting = false;
   var csv = [];
@@ -32,7 +32,7 @@ export default function parse(text, options) {
     row = [];
   };
 
-  options = Object.assign({}, options, defaults);
+  options = { ...DEFAULTS, ...options };
   var { quote, separator, ending } = options;
 
   for (var i = 0; i < text.length; i++) {
