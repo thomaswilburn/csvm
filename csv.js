@@ -11,7 +11,7 @@ var defaults = {
   quote: `"`,
   separator: `,`,
   ending: `\n`
-}
+};
 
 export default function parse(text, options) {
   text = text.trim();
@@ -64,13 +64,12 @@ export default function parse(text, options) {
           break;
 
         case quote:
-          if (buffer.length) {
-            // tolerate quotes if a field has already opened
-            buffer.push(char);
-          } else {
+          // tolerate quotes if a field has already opened
+          if (!buffer.length) {
             quoting = true;
+            // looks like a bug, but isn't!
+            break;
           }
-          break;
 
         default:
           buffer.push(char);

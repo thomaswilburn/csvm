@@ -8,6 +8,10 @@ export class Range {
     this.data = new Map();
   }
 
+  [Symbol.toPrimitive]() {
+    return `Range[${this.columns}x${this.rows}]`;
+  }
+
   key(c, r) {
     return c + ":" + r;
   }
@@ -40,12 +44,21 @@ export class Range {
 
   values(data) {
     if (data) {
-      var index = 0;
-      for (var value of data) {
-        var c = (index % this.columns) + 1;
-        var r = Math.floor(index / this.columns) + 1;
-        this.cell(c, r, value);
-        index++;
+      // read 2D arrays as individual rows
+      if (data[0] instanceof Array) {
+        for (var i = 0; i < data.length; i++) {
+          for (var j = 0; j < data[i].length; j++) {
+            this.cell(j + 1, i + 1, data[i][j]);
+          }
+        }
+      } else {
+        var index = 0;
+        for (var value of data) {
+          var c = (index % this.columns) + 1;
+          var r = Math.floor(index / this.columns) + 1;
+          this.cell(c, r, value);
+          index++;
+        }
       }
       return this;
     } else {
@@ -68,7 +81,7 @@ export class Range {
     for (var { column, row, x, y } of ref) {
       var value = this.cell(column, row);
       if (transform) {
-        value = transform(value, this);
+        value = transform(column, row, value, this);
       }
       copy.cell(x, y, value);
     }
@@ -160,30 +173,3 @@ export class Sheet extends Range {
     return super.cell(c, r, v);
   }
 }
-
-var s = new Sheet("worksheet", 3, 4);
-
-s.paste([1, 2, 3], "A1:C1");
-s.paste([4, 5, 6, 7], "A2:B3");
-s.paste([1, 2, 3, 4, 5], "A1:C2");
-s.setProtected("A1:C1");
-
-s.print();
-
-var r = s.copy(new Reference("A1:C2").setAddress("R[1]C[1]"));
-r.print();
-
-var r2 = new Range(2, 2).values([1, 2, 3, 4]);
-r2 = r2.copy();
-r2.print();
-
-r.paste(r2, (a, b) => a && b && a * b);
-r.print();
-
-s.paste(r, "A1:B2");
-s.print();
-
-s.paste(r2, new Reference("A1:B2").setAddress("R[1]C[1]"));
-s.print();
-s.paste(r2, "B2:C3", (a, b) => a && b && a * b);
-s.print();

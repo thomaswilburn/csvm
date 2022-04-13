@@ -1,7 +1,7 @@
 // Reference is used to turn text into row/column indexes and manipulate them.
 export class Reference {
-  constructor(address) {
-    this.sheet = "";
+  constructor(address, from) {
+    this.sheet = from ? from.name : "";
     this.column = 1;
     this.row = 1;
     this.columns = 1;
@@ -13,12 +13,30 @@ export class Reference {
     }
   }
 
+  static at(column, row, width = 1, height = 1) {
+    var ref = new Reference();
+    ref.column = column;
+    ref.row = row;
+    ref.columns = width;
+    ref.rows = height;
+    ref.address = ref + "";
+    return ref;
+  }
+
+  [Symbol.toPrimitive]() {
+    var sheet = this.sheet ? this.sheet + "!" : "";
+    var start = `R${this.row}C${this.column}`;
+    var end = `R${this.row + this.rows - 1}C${this.column + this.columns - 1}`;
+    return `=${sheet}${start}:${end}`;
+  }
+
   setAddress(address) {
     address = address.trim();
+    this.address = address;
     var sheetRE = /^(?:(?<sheet>\w+)!)?/i;
     var sheetMatch = address.match(sheetRE);
     if (sheetMatch && sheetMatch.groups.sheet) {
-      address.replace(sheetRE, "");
+      address = address.replace(sheetRE, "");
       this.sheet = sheetMatch.groups.sheet;
     }
     var isR1C1 = /^(r\d+c\d+|r\[-?\d+\]c\[-?\d+\])$/i;
