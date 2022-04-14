@@ -54,6 +54,7 @@ Most arithmetic operations in CSVM are in-place, overwriting the first parameter
 * ``expand A B`` - Unpack the A1/R1C1 reference at A into five cell values at B (sheet, column, row, width, height)
 * ``compact A B`` - Convert five cell values at A into an A1 reference at B
 * ``define A B`` - Define named range A in this sheet with the location or value of B.
+* ``concat A B`` - Combine the cells in A as text, and store them in B.
 
 In addition to these basic instructions, CSVM provides a number of game/shader inspired instructions.
 

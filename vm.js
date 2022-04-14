@@ -1,6 +1,9 @@
 import { Sheet, Range } from "./sheet.js";
 import { Reference } from "./reference.js";
 
+// memory-mapped hardware
+import StdOut from "./stdout.js";
+
 // direct lookup keys for common known registers
 const KEYS = {
   PC_COLUMN: "3:1",
@@ -33,9 +36,10 @@ export class CSVM {
     var cpu = new Sheet("cpu", 8, 4);
     // define the first row - columns, rows, PC column, PC row, clock
     cpu.paste([8, 4, 1, 2, Date.now()], "R1C1:R1C8");
+    cpu.setProtected("R1C1:R1C8");
     // add I/O sheets
     // these should subclass Sheet, typically
-    var stdout = new Sheet("stdout", 1, 1);
+    var stdout = new StdOut();
     // create the program sheet
     var [ sentinel, width ] = program[0];
     if (sentinel != "csvm" || typeof width != "number") throw new Error("Program is missing CSVM metadata");
@@ -45,6 +49,12 @@ export class CSVM {
       console.log(`Program loaded, ${data.columns} columns and ${data.rows} rows`);
     }
     this.sheets = { cpu, data, stdout };
+    this.namedRanges = {
+      "stdout": "stdout!A1",
+      "pcc": "cpu!C1",
+      "pcr": "cpu!D1",
+      "clock": "cpu!E1"
+    }
     // start execution
     this.step();
   }
@@ -56,6 +66,11 @@ export class CSVM {
   copyTransform(column, row, cellValue, target) {
     if (typeof cellValue == "string" && cellValue[0] == "=") {
       var address = cellValue.slice(1);
+      if (this.namedRanges[address]) {
+        address = this.namedRanges[address];
+        // named ranges can be stored references
+        if (address instanceof Reference) return address;
+      }
       var ref = Reference.at(column, row).setAddress(address);
       if (!ref.sheet) ref.sheet = "data";
       return ref;
