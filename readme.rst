@@ -26,7 +26,7 @@ Each instruction takes one or more cells as instructions:
 
 * Literal values consisting of numbers, strings, TRUE, or FALSE. As funny as it would be to provide a date type in a spreadsheet-inspired VM, we are not sadists.
 * Cell and range addresses, using the standard ``=sheet!A1:B2`` format. If the sheet is omitted, it's assumed to be in ``data``. 
-* R1C1 notation is also permitted, and can be useful for predetermined relative jumps.
+* R1C1 notation is also permitted, and can be useful for predetermined relative jumps or colocating data next to instructions.
 
 When comparing or combining values of different types, they will be converted to numbers and then compared. Empty cells and FALSE are converted to 0, and TRUE or string values are converted to 1.
 
@@ -34,45 +34,45 @@ Instructions are numerically coded, but string aliases are also defined for each
 
 Most arithmetic operations in CSVM are in-place, overwriting the first parameter. If you do not want to mutate your data, copy it into the ``cpu`` sheet and perform operations there, then copy it back to its destination.
 
-* ``CLEAR A`` - Erases the values from any cells in the range A.
-* ``COPY A B`` - Reads from range A and copies the cells to range B.
-* ``ADD A B`` - Adds the values in B to A, storing the result in A.
-* ``SUB A B`` - Subtracts B from A, storing the result in A.
-* ``MULT A B`` - Multiplies A by B, storing the result in A.
-* ``DIV A B`` - Divides A by B, storing the result in A.
-* ``MOD A B`` - Divides A by B and stores the remainder in A.
-* ``AND A B`` - Performs a bitwise AND of A and B, storing the result in A.
-* ``OR A B`` - Performs a bitwise OR of A and B, storing the result in A. 
-* ``XOR A B`` - Performs a bitwise XOR of A and B, storing the result in A.
-* ``NOT A`` - Performs a bitwise NOT of A, storing the result in A.
-* ``IF A B`` - Checks the value in A, and if it is non-zero, jump to B.
-* ``GT A B C`` - Compare A and B, and if A is greater, jump to C.
-* ``LT A B C`` - Compare A and B, and if B is greater, jump to C.
-* ``EQ A B C`` - Compare A and B, and if they're equal, jump to C.
-* ``NE A B C`` - Compare A and B, and if they're different, jump to C.
-* ``CALL A`` - Set the program counter to A, and add the current address to the return stack.
-* ``RET`` - Pop the most recent value from the call stack and jump to its location.
-* ``EXPAND A B`` - Unpack the A1/R1C1 reference at A into five cell values at B
-* ``COMPACT A B`` - Convert five cell values at A into an A1 reference at B
+* ``clear A`` - Erases the values from any cells in the range A.
+* ``copy A B`` - Reads from range A and copies the cells to range B.
+* ``add A B`` - Adds the values in B to A, storing the result in A.
+* ``sub A B`` - Subtracts B from A, storing the result in A.
+* ``mult A B`` - Multiplies A by B, storing the result in A.
+* ``div A B`` - Divides A by B, storing the result in A.
+* ``mod A B`` - Divides A by B and stores the remainder in A.
+* ``and A B`` - Performs a bitwise AND of A and B, storing the result in A.
+* ``or A B`` - Performs a bitwise OR of A and B, storing the result in A. 
+* ``xor A B`` - Performs a bitwise XOR of A and B, storing the result in A.
+* ``not A`` - Performs a bitwise NOT of A, storing the result in A.
+* ``goto A`` - Set the program counter to the location from A.
+* ``if A B`` - Checks the value in A, and if it is non-zero, jump to B.
+* ``eq A B C`` - Compare A and B, and if they're equal, jump to C.
+* ``gt A B C`` - Compare A and B, and if A is greater, jump to C.
+* ``call A`` - Set the program counter to A, and add the current address to the return stack.
+* ``ret`` - Pop the most recent value from the call stack and jump to its location.
+* ``expand A B`` - Unpack the A1/R1C1 reference at A into five cell values at B (sheet, column, row, width, height)
+* ``compact A B`` - Convert five cell values at A into an A1 reference at B
+* ``define A B`` - Define named range A in this sheet with the location or value of B.
 
 In addition to these basic instructions, CSVM provides a number of game/shader inspired instructions.
 
-* ``SIN A`` - Take the sine of A and store the result in-place.
-* ``COS A`` - Take the cosine of A and store the result in-place.
-* ``TAN A`` - Take the tangent of A and store the result in-place.
-* ``DOT A B`` - Perform the dot product of A and B, storing the result in A.
-* ``MAT A B C`` - Perform matrix multiplication of A and B, storing the result in C.
-* ``POW A B`` - Take A to the power of B and store the result in A.
-* ``CLAMP A B C`` - Clamp A to the bounds of B and C, storing the result in A.
-* ``MIN A B`` - Set A to the lower of A and B
-* ``MAX A B`` - Set A to the higher of A and B
-* ``ABS A`` - Set A to the absolute value of A.
-* ``RAND A`` - Set A to a random number in the range of 0 to 1.
+* ``sin A`` - Take the sine of A and store the result in-place.
+* ``cos A`` - Take the cosine of A and store the result in-place.
+* ``tan A`` - Take the tangent of A and store the result in-place.
+* ``dot A B`` - Perform the dot product of A and B, storing the result in A.
+* ``mat A B C`` - Perform matrix multiplication of A and B, storing the result in C.
+* ``pow A B`` - Take A to the power of B and store the result in A.
+* ``clamp A B C`` - Clamp A to the bounds of B and C, storing the result in A.
+* ``min A B`` - Set A to the lower of A and B
+* ``max A B`` - Set A to the higher of A and B
+* ``abs A`` - Set A to the absolute value of A.
+* ``rand A`` - Set A to a random number in the range of 0 to 1.
 
 CSVM provides some named ranges that are specially cached and accessed when referenced, effectively acting as registers:
 
 * ``=clock`` - current CPU clock time, which is Date.now() for a given cycle
-* ``=pc`` - current program counter address
+* ``=pcr`` and ``=pcc`` - current program counter index, row and column
 
 I/O
 ---
@@ -82,11 +82,17 @@ Input and output in CSVM are "memory-mapped" via specific sheets for each port. 
 TODO
 ----
 
-- Think of a label syntax?
-- Get the CPU up and running, with other sheets added to it if not functional.
 - Build I/O sheets
-  - console
+  - stdout
+    - just a single cell, and when you write to it it's immediately streamed outward
   - graphics
+    - should have two buffers, which you can flip between with a cell
+    - also a text mode? I'd like that
+    - conditional shading modes instead of a traditional pixel value
   - keyboard
   - audio
+    - 4+ synth voices
+    - each voice gets a row: waveform, frequency, decay rate, duration, interrupt
   - networking?
+- Finish building out instructions
+- Make I/O sheets swappable, to support browser and terminal versions

@@ -15,13 +15,13 @@ const instructions = `
 clear copy 
 `.trim().split(/\s+/);
 
-console.table(Object.fromEntries(instructions.map((op, i) => [op, i])));
+// console.table(Object.fromEntries(instructions.map((op, i) => [op, i])));
 
 const DEFAULTS = {
   verbose: false
 };
 
-var tick = global.process ? global.process.nextTick : global.requestAnimationFrame;
+var tick = globalThis.process ? globalThis.process.nextTick : globalThis.requestAnimationFrame;
 
 export class CSVM {
   constructor(program, options = {}) {
@@ -51,7 +51,6 @@ export class CSVM {
 
   /**
    * Range.copy() hook that dereferences addresses between sheets
-   * TODO: this should throw if a reference expansion would overwrite data
    * TODO: define named ranges here and cache them for faster lookup
    */
   copyTransform(column, row, cellValue, target) {
@@ -91,7 +90,6 @@ export class CSVM {
       }
     }
     // TODO: run any I/O processes at the end of execution
-    // TODO: set rAF for the next step()
     tick(this.step);
   }
 

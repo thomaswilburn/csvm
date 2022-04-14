@@ -158,7 +158,7 @@ export class Range {
     console.log(`${this.reference && this.reference.address || "Range"} (${this.columns}x${this.rows})`);
     var rows = this.grid().map(row => row.map(v => typeof v == "undefined" ? " " : String(v)));
     // in browsers, just use the built-in table
-    if (global.document) return console.table(rows);
+    if (globalThis.document) return console.table(rows);
     // in Node, render our own, more compact version
     var columnWidths = new Array(this.columns).fill(0).map((a, i) => {
       return Math.max(...rows.map(r => r[i].length))
