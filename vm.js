@@ -15,7 +15,7 @@ const KEYS = {
 const FRAME_BUDGET = 4;
 
 const instructions = `
-clear copy 
+clear copy sleep
 `.trim().split(/\s+/);
 
 // console.table(Object.fromEntries(instructions.map((op, i) => [op, i])));
@@ -23,6 +23,11 @@ clear copy
 const DEFAULTS = {
   verbose: false
 };
+
+const LOG = {
+  ERROR: "error",
+  VERBOSE: "verbose"
+}
 
 var tick = globalThis.process ? globalThis.process.nextTick : globalThis.requestAnimationFrame;
 
@@ -45,9 +50,7 @@ export class CSVM {
     if (sentinel != "csvm" || typeof width != "number") throw new Error("Program is missing CSVM metadata");
     var data = new Sheet("data", width, program.length);
     data.grid(program);
-    if (this.options.verbose) {
-      console.log(`Program loaded, ${data.columns} columns and ${data.rows} rows`);
-    }
+    this.verbose(`Program loaded, ${data.columns} columns and ${data.rows} rows`);
     this.sheets = { cpu, data, stdout };
     this.namedRanges = {
       "stdout": "stdout!A1",
@@ -57,6 +60,10 @@ export class CSVM {
     }
     // start execution
     this.step();
+  }
+
+  verbose(...items) {
+    if (this.options.verbose) console.log(...items.map(n => String(n)));
   }
 
   /**
@@ -82,7 +89,8 @@ export class CSVM {
   step() {
     var { cpu, data } = this.sheets;
     var frame = Date.now();
-    while (Date.now() < frame + FRAME_BUDGET) {
+    this.idle = false;
+    while (!this.idle && Date.now() < frame + FRAME_BUDGET) {
       // set the clock
       cpu.data.set(KEYS.CLOCK, Date.now());
       // get the current program counter directly
@@ -97,8 +105,9 @@ export class CSVM {
       var method = this[op];
       if (!method) throw new Error(`Opcode "${op}" not implemented`);
       var paramRef = Reference.at(pcc + 1, pcr, method.length);
-      var params = data.copy(paramRef, this.copyTransform);
-      var jumped = method.call(this, ...params.values());
+      var params = data.copy(paramRef, this.copyTransform).values();
+      this.verbose(op, ...params);
+      var jumped = method.call(this, ...params);
       if (!jumped) {
         // move to the next instruction
         cpu.data.set(KEYS.PC_ROW, pcr + 1);
@@ -132,14 +141,16 @@ export class CSVM {
   copy(from, to) {
     var data = this.dereference(from, to);
     var dest = this.sheets[to.sheet || "data"];
-    if (this.options.verbose) console.log(`copy ${from} ${to}`);
     dest.paste(data, to);
   }
 
   clear(location) {
     if (!(location instanceof Reference)) throw new Error(`Expected reference, got value "${location}"`);
     var dest = this.sheets[location.sheet];
-    if (this.options.verbose) console.log(`clear ${location}`)
     dest.clear(location);
+  }
+
+  sleep() {
+    this.idle = true;
   }
 }

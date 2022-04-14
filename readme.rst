@@ -68,6 +68,7 @@ expand      A B      Take the textual address at A and unpack it into five value
 compact     A B      Take five cell values from A and turn them into an =R1C1 address at B
 define      A B      Define a named range "A" for the VM with the location or value of B
 concat      A B      Set B = the combined textual values of A
+sleep                Pause execution until the next display tick (usually 60Hz)
 =========== ======== ===========
 
 In addition to these basic instructions, CSVM provides a number of game/shader inspired instructions.
