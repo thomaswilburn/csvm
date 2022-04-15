@@ -239,6 +239,7 @@ export class CSVM {
 
   jump(cell) {
     onlyReference(cell);
+    if (cell.sheet && cell.sheet != "data") throw new Error("Tried to jump to non-executable memory");
     this.pc = [cell.column, cell.row];
     return true;
   }
@@ -305,5 +306,5 @@ export class CSVM {
   min(range) {}
   max(range) {}
   clamp(value, min, max) {}
-  
+
 }
