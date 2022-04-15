@@ -12,27 +12,21 @@
       import parse from "./csv.js";
 
       var program = parse(`
-csvm,6
-copy,=R[0]C[2]:R[0]C[5],=cpu!A2:C2,a,b,c
-copy,=cpu!A2,=cpu!D2
-copy,12,=cpu!A3:H3
-clear,=cpu!C3:F3
-copy,display,=cpu!A4
-copy,1,=cpu!B4:E4
-copy,2,=cpu!C4
-copy,0,=display!R2C1:R129C64
-copy,=clock,=stdout
-define,target,=R[3]C[0]
-define,x,=cpu!B4
-define,y,=cpu!C4
-define,draw,=R[1]C[-2]
-pack,=cpu!A4:E4,=R[1]C[0]
-copy,1,
-add,=x,1
-add,=y,1
-sleep
-if,=display!R65C64,=R[2]C[-2]
-jump,=draw
+csvm,16
+copy,&R[0]C[2]:R[0]C[7],&cpu!A2:E2,display,1,2,1,1, # set unpacked pointer to sprite location
+copy,0,&display!R2C1:R129C64, # clear the display
+copy,&clock,&stdout, # test stdout
+define,target,&R[3]C[0], # set up labels for variables
+define,x,&cpu!B2
+define,y,&cpu!C2
+define,draw,&R[1]C[-2], # set label for loop start (next line)
+address,&cpu!A2:E2,&R[1]C[0], # modify the next line to have a display destination
+copy,1,, # set pixels in the addressed block
+add,&x,1, # update coords
+add,&y,1
+sleep, # pause for next frame
+if,&display!R65C64,&R[2]C[-2], # if we've marked the bottom corner, exit
+jump,&draw, # return to loop start
 exit
       `);
 

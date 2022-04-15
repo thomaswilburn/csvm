@@ -1,6 +1,6 @@
 // stdout is not really a sheet, but it acts like one and then logs all writes.
 
-import { Range } from "./sheet.js";
+import { Range } from "./range.js";
 
 var log = function(output) {
   if (output instanceof Range) {
