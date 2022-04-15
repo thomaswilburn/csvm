@@ -35,8 +35,8 @@ Instructions
 Each instruction takes one or more cells as instructions:
 
 * Literal values consisting of numbers, strings, TRUE, or FALSE. As funny as it would be to provide a date type in a spreadsheet-inspired VM, we are not sadists. If a literal is used in an instruction that affects a range of multiple cells, it will be applied to all of them, as if in an ARRAYFORMULA in Sheets.
-* Cell and range addresses, using the standard ``&sheet!A1:B2`` format (The ampersand is to make it possible to edit in a spreadsheet without actually executing the formula). If the sheet is omitted, it's assumed to be a reference to ``data``. 
-* ``&R1C1`` and ``&R[1]C[1]`` notation is also supported, and can be useful for predetermined relative jumps or colocating data next to instructions.
+* Cell and range addresses, using the standard ``*sheet!A1:B2`` format (The star is to make it possible to edit in a spreadsheet without actually executing the formula, and is meant to match the syntax from C/C++). If the sheet is omitted, it's assumed to be a reference to ``data``. 
+* ``*R1C1`` and ``*R[1]C[1]`` notation is also supported, and can be useful for predetermined relative jumps or colocating data next to instructions.
 
 When comparing or combining values of different types, or for the bitwise operations, values will be converted to numbers unless otherwise noted. Empty cells and FALSE are converted to 0, and TRUE or string values are converted to 1. 
 
@@ -58,18 +58,19 @@ and         A B      Sets A = A & B
 or          A B      Sets A = A | B
 not         A        Sets A = !A
 xor         A B      Sets A = A ^ B
-goto        A        Sets the program counter to the address in A
+jump        A        Sets the program counter to the address in A
 if          A B      If the value of A is non-zero, jumps to the address in B
 eq          A B C    If the values of A and B are the same, jumps to C
 gt          A B C    If A is greater than B, jumps to C
 call        A        Pushes the next instruction address onto the return stack and jumps to A
 return               Pop the most recent address from return stack and jump to it
 pointer     A B      Take the textual address at A and unpack it into five values at B (sheet, column number, row number, width, height)
-address     A B      Take five cell values from A and turn them into a &sheet!R1C1:R1C1 address at B
-local       A B      Take two cell values from A and turn them into a &R1C2 address at B
+address     A B      Take five cell values from A and turn them into a *sheet!R1C1:R1C1 address at B
+local       A B      Take two cell values from A and turn them into a *R1C2 address at B
 define      A B      Define a named range "A" for the VM with the location or value of B
 concat      A B      Set B = the combined textual values of A
 sleep                Pause execution until the next display tick (usually 60Hz)
+exit                 Terminate the VM
 =========== ======== ===========
 
 In addition to these basic instructions, CSVM provides a number of game/shader inspired instructions.
@@ -84,8 +85,8 @@ dot         A B      Set A = the dot product of A and B
 normal      A        Normalize values in A to the range of 0 to 1
 mat         A B C    Set C = matrix multiplication of A and B
 pow         A B      Set A = A**B
-min         A B      Set A = min(A, B)
-max         A B      Set A = max(A, B)
+min         A        Set A = min(A) where A is a range of cells
+max         A        Set A = max(A) where A is a range of cells
 clamp       A B C    Set A = max(B, min(C, A))
 abs         A        Set A = abs(A)
 rand        A        Set A = random values between 0 and 1
@@ -93,9 +94,9 @@ rand        A        Set A = random values between 0 and 1
 
 CSVM provides some named ranges that are specially cached and accessed when referenced, effectively acting as registers:
 
-* ``&clock`` - current CPU clock time, which is Date.now() for a given cycle
-* ``&pcr`` and ``&pcc`` - current program counter index, row and column
-* ``&stdout`` - ``&stdout!A1`` (simplifies things, since any value written to any address in the ``stdout`` sheet is immediately logged and discarded)
+* ``*clock`` - current CPU clock time, which is Date.now() for a given cycle
+* ``*pcr`` and ``*pcc`` - current program counter index, row and column
+* ``*stdout`` - ``*stdout!A1`` (simplifies things, since any value written to any address in the ``stdout`` sheet is immediately logged and discarded)
 
 I/O
 ---

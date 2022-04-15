@@ -18,8 +18,23 @@ var tick = globalThis.process ? globalThis.process.nextTick : globalThis.request
 // instructions logged on crash
 const HISTORY_LENGTH = 10;
 
-const instructions = `
-clear copy jump if pack unpack define sleep exit
+// tag for accessing a cell by address
+const DEREFERENCE = "*";
+
+const INSTRUCTIONS = `
+clear copy
+add sub mult div mod
+and or not xor
+jump if eq gt
+call return
+pointer address local
+define concat
+sleep exit
+
+sin cos tan
+dot normal mat 
+pow abs rand
+min max clamp
 `.trim().split(/\s+/);
 
 var { onlyReference } = Workbook;
@@ -76,7 +91,7 @@ export class CSVM {
    * Range.copy() hook that dereferences addresses between sheets
    */
   copyTransform(column, row, cellValue, target) {
-    if (typeof cellValue == "string" && cellValue[0] == "&") {
+    if (typeof cellValue == "string" && cellValue[0] == DEREFERENCE) {
       var address = cellValue.slice(1);
       if (this.namedRanges[address]) {
         address = this.namedRanges[address];
@@ -88,6 +103,12 @@ export class CSVM {
       return ref;
     }
     return cellValue;
+  }
+
+  record(pcc, pcr, op, ...params) {
+    this.verbose(op, ...params);
+    this.history.push([pcc, pcr, op, ...params]);
+    if (this.history.length > HISTORY_LENGTH) this.history.shift();
   }
 
   // TODO: this should probably loop as many times as it can in a given frame budget, say 4ms?
@@ -110,14 +131,19 @@ export class CSVM {
         if (typeof op == "number") {
           op = instructions[op];
         }
-        // if (!instructions.includes(op)) throw new Error(`Unknown instruction "${op}"`);
+        // only run allow-listed opcodes
+        if (!INSTRUCTIONS.includes(op)) throw new Error(`Unknown instruction "${op}"`);
         var method = this[op];
         if (!method) throw new Error(`Opcode "${op}" not implemented`);
+        // get params, using the arity of the VM instance
         var paramRef = Reference.at(pcc + 1, pcr, method.length);
         var params = data.copy(paramRef, this.copyTransform).values();
-        this.verbose(op, ...params);
-        this.history.push([pcc, pcr, op, ...params]);
-        if (this.history.length > HISTORY_LENGTH) this.history.shift();
+
+        // log operation
+        this.record(pcc, pcr, op, ...params);
+        
+        // execute opcode
+        // jumps will return true, so we don't re-increment the PCR
         var jumped = method.call(this, ...params);
         if (!jumped) {
           // move to the next instruction
@@ -156,19 +182,14 @@ export class CSVM {
     this.terminate();
   }
 
-  exit() {
-    var pc = [KEYS.PC_COLUMN, KEYS.PC_ROW].map(k => this.cpu.data.get(k));
-    this.terminate(...pc);
+  clear(location) {
+    onlyReference(location);
+    this.book.clear(location);
   }
 
   copy(from, to) {
     var data = this.book.getValues(from, to);
     this.book.paste(data, to);
-  }
-
-  clear(location) {
-    onlyReference(location);
-    this.book.clear(location);
   }
 
   add(location, value) {
@@ -179,27 +200,61 @@ export class CSVM {
     this.book.paste(sum, location);
   }
 
-  jump(location) {
+  sub(location, value) {
     onlyReference(location);
-    this.pc = [location.column, location.row];
+    var a = this.book.getValues(location);
+    var b = this.book.getValues(value, location);
+    var sum = b.map((v, i) => a[i] - v);
+    this.book.paste(sum, location);
+  }
+
+  mult(location, value) {
+    onlyReference(location);
+    var a = this.book.getValues(location);
+    var b = this.book.getValues(value, location);
+    var sum = b.map((v, i) => a[i] * v);
+    this.book.paste(sum, location);
+  }
+
+  div(location, value) {
+    onlyReference(location);
+    var a = this.book.getValues(location);
+    var b = this.book.getValues(value, location);
+    var sum = b.map((v, i) => a[i] / v);
+    this.book.paste(sum, location);
+  }
+
+  mod(location, value) {
+    onlyReference(location);
+    var a = this.book.getValues(location);
+    var b = this.book.getValues(value, location);
+    var sum = b.map((v, i) => a[i] % v);
+    this.book.paste(sum, location);
+  }
+
+  and(location, value) {}
+  or(location, value) {}
+  not(location) {}
+  xor(location, value) {}
+
+  jump(cell) {
+    onlyReference(cell);
+    this.pc = [cell.column, cell.row];
     return true;
   }
 
-  if(condition, dest) {
-    onlyReference(dest);
+  if(condition, cell) {
+    onlyReference(cell);
     if (condition instanceof Reference) {
       condition = this.book.cell(condition);
     }
-    if (condition) return this.jump(dest);
+    if (condition) return this.jump(cell);
   }
 
-  address(range, to) {
-    onlyReference(range);
-    onlyReference(to);
-    var [sheet = range.sheet, c, r, w = 1, h = 1] = this.book.getValues(range, to);
-    var pointer = `&${sheet}!R${r}C${c}:R${r + h}C${c + w}`;
-    this.book.cell(to, pointer);
-  }
+  eq(a, b, cell) {}
+  gt(a, b, cell) {}
+  call(cell) {}
+  return() {}
 
   pointer(range, dest) {
     onlyReference(range);
@@ -208,11 +263,19 @@ export class CSVM {
     this.book.paste(pointer, dest);
   }
 
+  address(range, to) {
+    onlyReference(range);
+    onlyReference(to);
+    var [sheet = range.sheet, c, r, w = 1, h = 1] = this.book.getValues(range, to);
+    var pointer = DEREFERENCE + `${sheet}!R${r}C${c}:R${r + h}C${c + w}`;
+    this.book.cell(to, pointer);
+  }
+
   local(range, dest) {
     onlyReference(range);
     onlyReference(dest);
     var [c, r] = this.book.getValues(range, dest);
-    var pointer = `&R${r}C${c}`;
+    var pointer = DEREFERENCE + `R${r}C${c}`;
     this.book.cell(dest, pointer);
   }
 
@@ -221,7 +284,26 @@ export class CSVM {
     this.namedRanges[name] = location;
   }
 
+  concat(input, location) {}
+
   sleep() {
     this.idle = true;
   }
+
+  exit() {
+    var pc = [KEYS.PC_COLUMN, KEYS.PC_ROW].map(k => this.cpu.data.get(k));
+    this.terminate(...pc);
+  }
+
+  sin(value) {}
+  cos(value) {}
+  tan(value) {}
+  dot(a, b) {}
+  normal(vector) {}
+  mat(a, b, out) {}
+  pow(a, b) {}
+  min(range) {}
+  max(range) {}
+  clamp(value, min, max) {}
+  
 }
