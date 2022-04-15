@@ -64,8 +64,9 @@ eq          A B C    If the values of A and B are the same, jumps to C
 gt          A B C    If A is greater than B, jumps to C
 call        A        Pushes the next instruction address onto the return stack and jumps to A
 return               Pop the most recent address from return stack and jump to it
-expand      A B      Take the textual address at A and unpack it into five values at B (sheet, column number, row number, width, height)
-compact     A B      Take five cell values from A and turn them into an =R1C1 address at B
+unpack      A B      Take the textual address at A and unpack it into five values at B (sheet, column number, row number, width, height)
+pack        A B      Take five cell values from A and turn them into a =1!R2C3:R4C5 address at B
+pointer     A B      Take two cell values from A and turn them into a =R1C2 address at B
 define      A B      Define a named range "A" for the VM with the location or value of B
 concat      A B      Set B = the combined textual values of A
 sleep                Pause execution until the next display tick (usually 60Hz)

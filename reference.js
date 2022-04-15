@@ -6,7 +6,6 @@ export class Reference {
     this.row = 1;
     this.columns = 1;
     this.rows = 1;
-    this.data = [];
     this.address = "";
     if (address) {
       this.setAddress(address);

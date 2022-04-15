@@ -17,13 +17,26 @@ copy,=R[0]C[2]:R[0]C[5],=cpu!A2:C2,a,b,c
 copy,=cpu!A2,=cpu!D2
 copy,12,=cpu!A3:H3
 clear,=cpu!C3:F3
-sleep
-copy,=A1:F10,=stdout
-copy,=pcc,=stdout
+copy,display,=cpu!A4
+copy,1,=cpu!B4:E4
+copy,2,=cpu!C4
+copy,0,=display!R2C1:R129C64
 copy,=clock,=stdout
+define,target,=R[3]C[0]
+define,x,=cpu!B4
+define,y,=cpu!C4
+define,draw,=R[1]C[-2]
+pack,=cpu!A4:E4,=R[1]C[0]
+copy,1,
+add,=x,1
+add,=y,1
+sleep
+if,=display!R65C64,=R[2]C[-2]
+jump,=draw
+exit
       `);
 
-      var vm = new CSVM(program, { verbose: true });
+      var vm = new CSVM(program, { verbose: 0 });
       console.log("tick");
     </script>
 
