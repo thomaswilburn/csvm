@@ -17,6 +17,7 @@ export default class DisplaySheet extends Sheet {
     // width, height, buffer offset, display mode
     this.paste([width, width, 0, 0], "A1:G1");
     this.setProtected("A1:B1");
+    this.ready = true;
   }
 
   update() {
@@ -26,7 +27,7 @@ export default class DisplaySheet extends Sheet {
     var end = start + this.columns;
     var values = this.copy(`R${start}C1:R${end}C${this.columns}`).grid();
     var px = this.canvas.width / this.columns;
-    // this.print();
+    // this.print(); debugger;
     for (var y = 0; y < values.length; y++) {
       var row = values[y];
       for (var x = 0; x < row.length; x++) {
@@ -37,5 +38,14 @@ export default class DisplaySheet extends Sheet {
         }
       }
     }
+  }
+
+  cell(c, r, v) {
+    var value = super.cell(c, r, v);
+    // if the buffer offset or display mode is written, update()
+    if (this.ready && r == 1 && typeof v != "undefined") {
+      this.update();
+    }
+    return value;
   }
 }

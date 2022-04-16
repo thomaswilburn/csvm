@@ -1,28 +1,34 @@
 csvm,17,,,,,,,,,,,,,,,
 define,sprite,*J18:Q25,,,,,,,# local reference to our requested cell,,,,,,,
 define,blit,*J5:N5,,,,,,sheet,column,row,ITEM,,,,,
-define,cr,*J3:K3,,,,,,,# display pointer for blit,,,,,,,
+define,index,*J3:K3,,,,,,,# display pointer for blit,,,,,,,
 define,item,*L3,,,,,,,display,1,1,8,8,,,
 define,scratch,*L8,,,,,,,,,,,,,,
 define,outer,*A9,# eventually this will be a call,,,,,,# sprite locations,,# scratch memory,,,,,
 define,inner,*A11,# loop restart,,,,,,1,,,,,,,
-pointer,*J8,*I3:M3,# initialize the sprite position pointer,,,,,,2,,,,,,,
-clear,*display!R2C1:R65C64,,# clear the display,,,,,,3,,,,,,,
-local,*cr,*item,,,,,,,4,,,,,,,
-copy,*clock,*scratch,,,,,,,5,,,,,,,
-mult,*scratch,0.001,,,,,,,6,,,,,,,
-add,*scratch,&item,,,,,,,7,,,,,,,
-sin,*scratch,,,,,,,,8,,,,,,,
+clear,*display!R2C1:R65C64,,# clear the display,,,,,,2,,,,,,,
+pointer,*J8,*I3:M3,# initialize the sprite position pointer,,,,,,3,,,,,,,
+call,*A21,,# call draw(),,,,,,4,,,,,,,
+add,*K3,1,# increment the sprite index,,,,,,5,,,,,,,
+local,*index,*item,,,,,,,6,,,,,,,
+if,&item,*inner,,,,,,,7,,,,,,,
+sleep,,,,,,,,,8,,,,,,,
+copy,0,*display!C1,# update the screen,,,,,,,,,,,,,
+jump,*outer,,,,,,,,# sprite data,,,,,,,
+,,,,,,,,,,1,1,1,1,1,1,
+,,,,,,,,,1,1,,1,1,,1,1
+# draw(),,,,,,,,,1,1,,1,1,,1,1
+local,*index,*item,,,,,,,1,1,1,1,1,1,1,1
+copy,*clock,*scratch,,,,,,,1,,1,1,1,1,,1
+mult,*scratch,0.001,,,,,,,1,,,,,,,1
+add,*scratch,&item,,,,,,,1,1,,,,,1,1
+sin,*scratch,,,,,,,,,1,1,1,1,1,1,
 mult,*scratch,24,,,,,,,,,,,,,,
-add,*scratch,32,,,,,,,# sprite data,,,,,,,
-floor,*scratch,,,,,,,,0,1,1,1,1,1,1,0
-copy,*scratch,*K5,,,,,,,1,1,0,1,1,0,1,1
-copy,&item,*L5,,,,,,,1,1,0,1,1,0,1,1
-mult,*L5,7,,,,,,,1,1,1,1,1,1,1,1
-address,*blit,*J6,# create the display sheet destination pointer,,,,,,1,0,1,1,1,1,0,1
-copy,*sprite,&J6,# blit the sprite,,,,,,1,0,1,1,1,1,0,1
-add,*K3,1,,,,,,,1,1,0,0,0,0,1,1
-local,*cr,*item,,,,,,,0,1,1,1,1,1,1,0
-if,&item,*inner,,,,,,,,,,,,,,
-sleep,,,,,,,,,,,,,,,,
-jump,*outer,,,,,,,,,,,,,,,
+add,*scratch,32,,,,,,,,,,,,,,
+floor,*scratch,,,,,,,,,,,,,,,
+copy,*scratch,*K5,,,,,,,,,,,,,,
+copy,&item,*L5,,,,,,,,,,,,,,
+mult,*L5,7,,,,,,,,,,,,,,
+address,*blit,*J6,# create the display sheet destination pointer,,,,,,,,,,,,,
+copy,*sprite,&J6,# blit the sprite,,,,,,,,,,,,,
+return,,,,,,,,,,,,,,,,

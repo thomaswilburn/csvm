@@ -82,6 +82,7 @@ export class CSVM {
     // start execution
     this.running = true;
     this.history = [];
+    this.stack = [];
     this.step();
   }
 
@@ -129,13 +130,13 @@ export class CSVM {
   // TODO: this should probably loop as many times as it can in a given frame budget, say 4ms?
   step() {
     var { cpu, data, display } = this.book.sheets;
-    var [pcc, pcr] = this.pc;
     var frame = Date.now();
     this.idle = false;
     while (this.running && !this.idle && Date.now() < frame + FRAME_BUDGET) {
       // set the clock
       cpu.data.set(KEYS.CLOCK, Date.now());
       // set the PC cell for inspection purposes
+      var [pcc, pcr] = this.pc;
       cpu.data.set(KEYS.PC_COLUMN, pcc);
       cpu.data.set(KEYS.PC_ROW, pcr);
 
@@ -170,16 +171,12 @@ export class CSVM {
         return this.crash(pcc, pcr);
       }
     }
-    // run any I/O processes at the end of execution
-    display.update();
     // schedule the next CPU run
     if (this.running) tick(this.step);
   }
 
   terminate() {
     this.running = false;
-    // final I/O
-    this.book.sheets.display.update();
     // any cleanup goes here
     var [row, column] = this.pc;
     console.log(`Exited at R${row}C${column}`);
@@ -206,6 +203,7 @@ export class CSVM {
   }
 
   copy(from, to) {
+    onlyReference(to);
     var data = [from];
     if (from instanceof Reference) {
       data = this.book.getValues(from, to);
@@ -275,8 +273,19 @@ export class CSVM {
 
   eq(a, b, cell) {}
   gt(a, b, cell) {}
-  call(cell) {}
-  return() {}
+  
+  call(address) {
+    this.stack.push(this.pc);
+    return this.jump(address);
+  }
+  
+  return() {
+    if (!this.stack.length) throw new Error("Return from an empty stack!");
+    var [pcc, pcr] = this.stack.pop();
+    pcr++;
+    this.pc = [pcc, pcr];
+    return true;
+  }
 
   pointer(range, dest) {
     onlyReference(range);
