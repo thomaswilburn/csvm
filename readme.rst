@@ -35,8 +35,15 @@ Instructions
 Each instruction takes one or more cells as instructions:
 
 * Literal values consisting of numbers, strings, TRUE, or FALSE. As funny as it would be to provide a date type in a spreadsheet-inspired VM, we are not sadists. If a literal is used in an instruction that affects a range of multiple cells, it will be applied to all of them, as if in an ARRAYFORMULA in Sheets.
-* Cell and range addresses, using the standard ``*sheet!A1:B2`` format (The star is to make it possible to edit in a spreadsheet without actually executing the formula, and is meant to match the syntax from C/C++). If the sheet is omitted, it's assumed to be a reference to ``data``. 
-* ``*R1C1`` and ``*R[1]C[1]`` notation is also supported, and can be useful for predetermined relative jumps or colocating data next to instructions.
+* Cell and range addresses, using the standard ``sheet!A1:B2`` format. If the sheet is omitted, it's assumed to be a reference to ``data``. 
+* ``R1C1`` and ``R[1]C[1]`` notation is also supported, and can be useful for predetermined relative jumps or colocating data next to instructions.
+
+Sheet addresses must be prefixed with one of two operators in order to use them with an opcode.
+
+* ``*A1`` is a *direct* reference to call A1 and/or its value.
+* ``&A1`` is an *indirect* reference: the VM will load A1 and use it to find the actual requested value.
+
+For example, ``clear *B5`` means that the contents of cell B5 will be deleted. ``clear &B5`` means that the VM will take the value of B5, which should be a direct cell address prefixed with ``*``, and clear that cell.
 
 When comparing or combining values of different types, or for the bitwise operations, values will be converted to numbers unless otherwise noted. Empty cells and FALSE are converted to 0, and TRUE or string values are converted to 1. 
 
@@ -106,6 +113,7 @@ Input and output in CSVM are "memory-mapped" via specific sheets for each port. 
 TODO
 ----
 
+- Add the ability to dereference pointers using &
 - Build I/O sheets
   - keyboard
   - audio

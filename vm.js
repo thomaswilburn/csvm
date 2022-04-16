@@ -18,8 +18,9 @@ var tick = globalThis.process ? globalThis.process.nextTick : globalThis.request
 // instructions logged on crash
 const HISTORY_LENGTH = 10;
 
-// tag for accessing a cell by address
-const DEREFERENCE = "*";
+// pointer operations
+const DIRECT = "*";
+const INDIRECT = "&";
 
 const INSTRUCTIONS = `
 clear copy
@@ -35,9 +36,10 @@ sin cos tan
 dot normal mat 
 pow abs rand
 min max clamp
+floor ceil
 `.trim().split(/\s+/);
 
-var { onlyReference } = Workbook;
+var { onlyReference, onlyValue } = Workbook;
 
 const DEFAULTS = {
   verbose: false
@@ -90,17 +92,30 @@ export class CSVM {
   /**
    * Range.copy() hook that dereferences addresses between sheets
    */
-  copyTransform(column, row, cellValue, target) {
-    if (typeof cellValue == "string" && cellValue[0] == DEREFERENCE) {
+  copyTransform(column, row, cellValue) {
+    if (typeof cellValue == "string") {
+      cellValue = cellValue.trim();
+      var operator = cellValue[0];
+      if (operator != INDIRECT && operator != DIRECT) return cellValue;
       var address = cellValue.slice(1);
       if (this.namedRanges[address]) {
         address = this.namedRanges[address];
-        // named ranges can be stored references
-        if (address instanceof Reference) return address;
       }
-      var ref = Reference.at(column, row).setAddress(address);
+      var ref = address instanceof Reference ? address : Reference.at(column, row).setAddress(address);
       if (!ref.sheet) ref.sheet = "data";
-      return ref;
+      switch (operator) {
+        case DIRECT:
+          // the reference itself is what we want
+          return ref;
+
+        case INDIRECT:
+          // actually go out and get the data
+          var value = this.book.cell(ref);
+          value = this.copyTransform(ref.column, ref.row, value);
+          // ref = ref.setAddress(value.slice(1));
+          // substitute the actual pointer
+          return value;
+      }
     }
     return cellValue;
   }
@@ -139,8 +154,8 @@ export class CSVM {
         var paramRef = Reference.at(pcc + 1, pcr, method.length);
         var params = data.copy(paramRef, this.copyTransform).values();
 
-        // log operation
         this.record(pcc, pcr, op, ...params);
+        // log operation
         
         // execute opcode
         // jumps will return true, so we don't re-increment the PCR
@@ -171,6 +186,8 @@ export class CSVM {
     if (this.options.verbose) {
       console.log("CPU memory dump follows:");
       this.cpu.print();
+      console.log("Data sheet dump follows:");
+      this.book.sheets.data.print();
     }
   }
 
@@ -179,6 +196,7 @@ export class CSVM {
     for (var row of this.history) {
       console.log(row.join(" "));
     }
+    this.book.sheets.data.print();
     this.terminate();
   }
 
@@ -188,7 +206,10 @@ export class CSVM {
   }
 
   copy(from, to) {
-    var data = this.book.getValues(from, to);
+    var data = [from];
+    if (from instanceof Reference) {
+      data = this.book.getValues(from, to);
+    }
     this.book.paste(data, to);
   }
 
@@ -196,40 +217,40 @@ export class CSVM {
     onlyReference(location);
     var a = this.book.getValues(location);
     var b = this.book.getValues(value, location);
-    var sum = b.map((v, i) => a[i] + v);
-    this.book.paste(sum, location);
+    var result = b.map((v, i) => a[i] + v);
+    this.book.paste(result, location);
   }
 
   sub(location, value) {
     onlyReference(location);
     var a = this.book.getValues(location);
     var b = this.book.getValues(value, location);
-    var sum = b.map((v, i) => a[i] - v);
-    this.book.paste(sum, location);
+    var result = b.map((v, i) => a[i] - v);
+    this.book.paste(result, location);
   }
 
   mult(location, value) {
     onlyReference(location);
     var a = this.book.getValues(location);
     var b = this.book.getValues(value, location);
-    var sum = b.map((v, i) => a[i] * v);
-    this.book.paste(sum, location);
+    var result = b.map((v, i) => a[i] * v);
+    this.book.paste(result, location);
   }
 
   div(location, value) {
     onlyReference(location);
     var a = this.book.getValues(location);
     var b = this.book.getValues(value, location);
-    var sum = b.map((v, i) => a[i] / v);
-    this.book.paste(sum, location);
+    var result = b.map((v, i) => a[i] / v);
+    this.book.paste(result, location);
   }
 
   mod(location, value) {
     onlyReference(location);
     var a = this.book.getValues(location);
     var b = this.book.getValues(value, location);
-    var sum = b.map((v, i) => a[i] % v);
-    this.book.paste(sum, location);
+    var sums = b.map((v, i) => a[i] % v);
+    this.book.paste(sums, location);
   }
 
   and(location, value) {}
@@ -268,7 +289,7 @@ export class CSVM {
     onlyReference(range);
     onlyReference(to);
     var [sheet = range.sheet, c, r, w = 1, h = 1] = this.book.getValues(range, to);
-    var pointer = DEREFERENCE + `${sheet}!R${r}C${c}:R${r + h}C${c + w}`;
+    var pointer = DIRECT + `${sheet}!R${r}C${c}:R${r + h - 1}C${c + w - 1}`;
     this.book.cell(to, pointer);
   }
 
@@ -276,7 +297,7 @@ export class CSVM {
     onlyReference(range);
     onlyReference(dest);
     var [c, r] = this.book.getValues(range, dest);
-    var pointer = DEREFERENCE + `R${r}C${c}`;
+    var pointer = DIRECT + `R${r}C${c}`;
     this.book.cell(dest, pointer);
   }
 
@@ -296,8 +317,20 @@ export class CSVM {
     this.terminate(...pc);
   }
 
-  sin(value) {}
-  cos(value) {}
+  sin(location) {
+    onlyReference(location);
+    var theta = this.book.cell(location);
+    var result = Math.sin(theta);
+    this.book.cell(location, result);
+  }
+
+  cos(location) {
+    onlyReference(location);
+    var theta = this.book.cell(location);
+    var result = Math.cos(theta);
+    this.book.cell(location, result);
+  }
+
   tan(value) {}
   dot(a, b) {}
   normal(vector) {}
@@ -306,5 +339,20 @@ export class CSVM {
   min(range) {}
   max(range) {}
   clamp(value, min, max) {}
+  
+  floor(location) {
+    onlyReference(location);
+    var value = this.book.cell(location);
+    var result = Math.floor(value);
+    this.book.cell(location, result);
+  }
+
+  ceil(location) {
+    onlyReference(location);
+    var value = this.book.cell(location);
+    var result = Math.ceil(value);
+    this.book.cell(location, result);
+
+  }
 
 }

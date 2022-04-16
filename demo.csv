@@ -1,16 +1,28 @@
-csvm,16,,,,,,,
-copy,*R[0]C[2]:R[0]C[7],*cpu!A2:E2,display,1,2,1,1, # set unpacked pointer to sprite location
-copy,0,*display!R2C1:R129C64, # clear the display,,,,,
-copy,*clock,*stdout, # test stdout,,,,,
-define,target,*R[3]C[0], # set up labels for variables,,,,,
-define,x,*cpu!B2,,,,,,
-define,y,*cpu!C2,,,,,,
-define,draw,*R[1]C[-2], # set label for loop start (next line),,,,,
-address,*cpu!A2:E2,*R[1]C[0], # modify the next line to have a display destination,,,,,
-copy,1,, # set pixels in the addressed block,,,,,
-add,*x,1, # update coords,,,,,
-add,*y,1,,,,,,
-sleep, # pause for next frame,,,,,,,
-if,*display!R65C64,*R[2]C[-2], # if we've marked the bottom corner, exit,,,,
-jump,*draw, # return to loop start,,,,,,
-exit,,,,,,,,
+csvm,17,,,,,,,,,,,,,,,
+define,sprite,*J18:Q25,,,,,,,# local reference to our requested cell,,,,,,,
+define,blit,*J5:N5,,,,,,sheet,column,row,ITEM,,,,,
+define,cr,*J3:K3,,,,,,,# display pointer for blit,,,,,,,
+define,item,*L3,,,,,,,display,1,1,8,8,,,
+define,scratch,*L8,,,,,,,,,,,,,,
+define,outer,*A9,# eventually this will be a call,,,,,,# sprite locations,,# scratch memory,,,,,
+define,inner,*A11,# loop restart,,,,,,1,,,,,,,
+pointer,*J8,*I3:M3,# initialize the sprite position pointer,,,,,,2,,,,,,,
+clear,*display!R2C1:R65C64,,# clear the display,,,,,,3,,,,,,,
+local,*cr,*item,,,,,,,4,,,,,,,
+copy,*clock,*scratch,,,,,,,5,,,,,,,
+mult,*scratch,0.001,,,,,,,6,,,,,,,
+add,*scratch,&item,,,,,,,7,,,,,,,
+sin,*scratch,,,,,,,,8,,,,,,,
+mult,*scratch,24,,,,,,,,,,,,,,
+add,*scratch,32,,,,,,,# sprite data,,,,,,,
+floor,*scratch,,,,,,,,0,1,1,1,1,1,1,0
+copy,*scratch,*K5,,,,,,,1,1,0,1,1,0,1,1
+copy,&item,*L5,,,,,,,1,1,0,1,1,0,1,1
+mult,*L5,7,,,,,,,1,1,1,1,1,1,1,1
+address,*blit,*J6,# create the display sheet destination pointer,,,,,,1,0,1,1,1,1,0,1
+copy,*sprite,&J6,# blit the sprite,,,,,,1,0,1,1,1,1,0,1
+add,*K3,1,,,,,,,1,1,0,0,0,0,1,1
+local,*cr,*item,,,,,,,0,1,1,1,1,1,1,0
+if,&item,*inner,,,,,,,,,,,,,,
+sleep,,,,,,,,,,,,,,,,
+jump,*outer,,,,,,,,,,,,,,,

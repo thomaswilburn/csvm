@@ -10,12 +10,12 @@ export class Workbook {
     this.home = home;
   }
 
-  copy(reference) {
-    return this.sheets[reference.sheet || this.home].copy(reference);
+  copy(reference, transform) {
+    return this.sheets[reference.sheet || this.home].copy(reference, transform);
   }
 
-  paste(value, reference) {
-    return this.sheets[reference.sheet || this.home].paste(value, reference);
+  paste(value, reference, special) {
+    return this.sheets[reference.sheet || this.home].paste(value, reference, special);
   }
 
   cell(reference, value) {
@@ -36,5 +36,9 @@ export class Workbook {
   static onlyReference(r) {
     if (r instanceof Reference) return;
     throw new Error(`Expected Reference, got ${r}`);
+  }
+
+  static onlyValue(v) {
+    if (v instanceof Object) throw new Error(`Expected value, got ${v}`);
   }
 }

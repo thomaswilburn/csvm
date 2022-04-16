@@ -30,7 +30,7 @@ export default class DisplaySheet extends Sheet {
     for (var y = 0; y < values.length; y++) {
       var row = values[y];
       for (var x = 0; x < row.length; x++) {
-        var pixel = row[x];
+        var pixel = Number(row[x]);
         if (pixel) {
           this.context.fillStyle = "#000C";
           this.context.fillRect(x * px, y * px, px, px);
