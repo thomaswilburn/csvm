@@ -215,47 +215,43 @@ export class CSVM {
     this.book.paste(data, to);
   }
 
-  /* TODO: this would really benefit from being a decorator */
-  numericalOp(location, value, op) {
-    onlyReference(location);
-    var castToNumber = v => (typeof v != "number"
-      ? v ? 1 : 0
-      : v);
+  // opcode factory functions--eventually these could be decorators
+  static numericalOp(op) {
+    return function(location, value) {
+      onlyReference(location);
+      var castToNumber = v => (typeof v != "number"
+        ? v ? 1 : 0
+        : v);
 
-    var a = this.book.getValues(location).map(castToNumber);
-    var b = this.book.getValues(value, location).map(castToNumber);
-    var result = b.map((v, i) => op(a[i], v));
-    this.book.paste(result, location);
+      var a = this.book.getValues(location).map(castToNumber);
+      var b = this.book.getValues(value, location).map(castToNumber);
+      var result = b.map((v, i) => op(a[i], v));
+      this.book.paste(result, location);
+    }
   }
 
-  numericalOpUnary(location, op) {
-    onlyReference(location);
-    var castToNumber = v => (typeof v != "number"
-      ? v ? 1 : 0
-      : v);
+  static numericalOpUnary(op) {
+    return function(location) {
+      onlyReference(location);
+      var castToNumber = v => (typeof v != "number"
+        ? v ? 1 : 0
+        : v);
 
-    var a = this.book.getValues(location).map(castToNumber);
-    var result = a.map(op);
-    return this.book.paste(result, location);
+      var a = this.book.getValues(location).map(castToNumber);
+      var result = a.map(op);
+      return this.book.paste(result, location);
+    }
   }
 
-  add(location, value) { return this.numericalOp(location, value, (a, b) => a + b) }
-
-  sub(location, value) { return this.numericalOp(location, value, (a, b) => a - b) }
-
-  mult(location, value) { return this.numericalOp(location, value, (a, b) => a * b) }
-
-  div(location, value) { return this.numericalOp(location, value, (a, b) => a / b) }
-
-  mod(location, value) { return this.numericalOp(location, value, (a, b) => a % b) }
-
-  and(location, value) { return this.numericalOp(location, value, (a, b) => a & b) }
-
-  or(location, value) { return this.numericalOp(location, value, (a, b) => a | b) }
-
-  xor(location, value) { return this.numericalOp(location, value, (a, b) => a ^ b) }
-
-  not(location) { return this.numericalOpUnary(location, a => ~a ) }
+  add = CSVM.numericalOp((a, b) => a + b)
+  sub = CSVM.numericalOp((a, b) => a - b)
+  mult = CSVM.numericalOp((a, b) => a * b)
+  div = CSVM.numericalOp((a, b) => a / b)
+  mod = CSVM.numericalOp((a, b) => a % b)
+  and = CSVM.numericalOp((a, b) => a & b)
+  or = CSVM.numericalOp((a, b) => a | b)
+  xor = CSVM.numericalOp((a, b) => a ^ b)
+  not = CSVM.numericalOpUnary(a => ~a)
 
   jump(cell) {
     onlyReference(cell);
@@ -335,24 +331,21 @@ export class CSVM {
     this.terminate(...pc);
   }
 
-  sin(location) { return this.numericalOpUnary(location, a => Math.sin(a)) }
-
-  cos(location) { return this.numericalOpUnary(location, a => Math.cos(a)) }
-
-  tan(location) { return this.numericalOpUnary(location, a => Math.tan(a) ) }
+  sin = CSVM.numericalOpUnary(a => Math.sin(a))
+  cos = CSVM.numericalOpUnary(a => Math.cos(a))
+  tan = CSVM.numericalOpUnary(a => Math.tan(a))
 
   dot(a, b) {}
   normal(vector) {}
   mat(a, b, out) {}
 
-  pow(location, value) { return this.numericalOp(location, value, (a, b) => a ** b ) }
+  pow = CSVM.numericalOp((a, b) => a ** b )
   
   min(range) {}
   max(range) {}
   clamp(value, min, max) {}
   
-  floor(location) { return this.numericalOpUnary(location, a => Math.floor(a) ) }
-
-  ceil(location) { return this.numericalOpUnary(location, a => Math.ceil(a) ) }
+  floor = CSVM.numericalOpUnary(a => Math.floor(a))
+  ceil = CSVM.numericalOpUnary(a => Math.ceil(a))
 
 }

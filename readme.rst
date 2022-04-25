@@ -110,12 +110,12 @@ Display
 
 The ``display`` sheet can be used to show graphics. By default, a CSVM instance has a 64x64 black-and-white "LCD" screen. The first row of the sheet provides some key configuration in the following cells:
 
-* The width of the screen in pixels
-* The height of the screen in pixels
-* The VRAM page
-* The current display mode
+* The width of the screen in pixels (defaults to 64)
+* The height of the screen in pixels (defaults to 64)
+* The VRAM page (defaults to 0)
+* The current display mode (defaults to 0)
 
-Setting either the VRAM page or display mode will refresh the display's internal buffer and trigger a screen update.
+Setting either the VRAM page or display mode will refresh the display's internal buffer and trigger a screen update. The width and height of the screen are read-only.
 
 After the first row, the display sheet contains two square blocks of cells, each equal in size. The VRAM page value selects between these two. For example, when the page value is 0, the screen will be drawn from the values in R2C1:R65C64 (A2:BL65). Setting the page to 1 will cause it to draw from R66C1:R129C64 (A66:BL129). This allows developers to either double-buffer the display, or to use only a single VRAM page for drawing and use the other for arbitrary data.
 
@@ -124,6 +124,16 @@ Display modes are effectively pixel shader presets that take the VRAM values and
 * 0 - One-bit rendering, with non-zero numerical values turning the pixel on.
 * 1 - Four-shade grayscale, with 0 being "off" and 3 being the darkest shade
 * 2 - "confetti" colors for any non-zero numerical value.
+
+Audio
+-----
+
+Audio implementation details go here.
+
+Input
+-----
+
+Input implementation details go here.
 
 TODO
 ----
