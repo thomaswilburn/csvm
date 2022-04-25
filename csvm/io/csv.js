@@ -44,9 +44,8 @@ export default function parse(text, options = {}) {
         if (next == quote) {
           buffer.push(quote);
           i++;
-        } else if (next != separator) {
-          console.log(char, next);
-          throw new Error("Field continued after ending quote");
+        } else if (next != separator && next != line) {
+          throw new Error(`Field continued after ending quote: "...${text.slice(i - 20, i)}"`);
         } else {
           quoting = false;
         }

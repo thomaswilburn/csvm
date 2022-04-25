@@ -2,8 +2,8 @@ import { Sheet, Range, Reference, Workbook } from "./workbook.js";
 var { onlyReference, onlyValue } = Workbook;
 
 // memory-mapped hardware
-import StdOut from "./stdout.js";
-import DisplaySheet from "./display.js";
+import StdOut from "./io/stdout.js";
+import DisplaySheet from "./io/display.js";
 
 // direct lookup keys for common known registers
 const KEYS = {
@@ -92,6 +92,10 @@ export class CSVM {
     // start execution
     this.running = true;
     this.step();
+
+    window.addEventListener("keydown", e => {
+      if (e.key == "c" && e.ctrlKey) this.crash();
+    });
   }
 
   verbose(...items) {
@@ -194,8 +198,6 @@ export class CSVM {
     var [row, column] = this.pc;
     console.log(`Exited at R${row}C${column}`);
     if (this.options.verbose) {
-      console.log("CPU memory dump follows:");
-      this.cpu.print();
       console.log("Data sheet dump follows:");
       this.book.sheets.data.print();
     }
@@ -206,7 +208,8 @@ export class CSVM {
     for (var row of this.history) {
       console.log(row.join(" "));
     }
-    this.book.sheets.data.print();
+    console.log("CPU memory dump follows:");
+    this.cpu.print();
     this.terminate();
   }
 
@@ -249,8 +252,25 @@ export class CSVM {
     if (!condition) return this.jump(cell);
   }
 
-  eq(a, b, cell) {}
-  gt(a, b, cell) {}
+  eq(a, b, cell) {
+    if (a instanceof Reference) {
+      a = this.book.cell(a);
+    }
+    if (b instanceof Reference) {
+      b = this.book.cell(b);
+    }
+    if (a == b) return this.jump(cell);
+  }
+
+  gt(a, b, cell) {
+    if (a instanceof Reference) {
+      a = this.book.cell(a);
+    }
+    if (b instanceof Reference) {
+      b = this.book.cell(b);
+    }
+    if (a > b) return this.jump(cell);
+  }
   
   call(address) {
     this.stack.push(this.pc);

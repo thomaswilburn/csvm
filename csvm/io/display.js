@@ -1,5 +1,4 @@
-import { Sheet } from "./sheet.js";
-import { Reference } from "./reference.js";
+import { Sheet, Reference } from "../workbook.js";
 
 // LED refresh interval in ms
 const LCD_LAG = 20;

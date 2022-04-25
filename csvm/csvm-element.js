@@ -1,6 +1,6 @@
 import { CSVM } from "./vm.js";
-import parse from "./csv.js";
-import DisplaySheet from "./display.js";
+import parse from "./io/csv.js";
+import DisplaySheet from "./io/display.js";
 
 var template = `
 <style>

@@ -1,6 +1,6 @@
-import { Reference } from "./reference.js";
-import { Range } from "./range.js";
-import { Sheet } from "./sheet.js";
+import { Reference } from "./workbook/reference.js";
+import { Range } from "./workbook/range.js";
+import { Sheet } from "./workbook/sheet.js";
 
 export { Reference, Range, Sheet };
 
