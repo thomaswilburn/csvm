@@ -13,16 +13,16 @@ add,*K3,1,# increment the sprite index,,,,,,5,,,,,,,
 local,*index,*item,,,,,,,6,,,,,,,
 if,&item,*inner,,,,,,,,,,,,,,
 sleep,,,,,,,,,,,,,,,,
-copy,0,*display!C1,# update the screen,,,,,,,,,,,,,
+copy,1,*display!D1,# update the screen,,,,,,,,,,,,,
 jump,*outer,,,,,,,,# sprite data,,,,,,,
-,,,,,,,,,,1,1,1,1,1,1,
-,,,,,,,,,1,1,,1,1,,1,1
-# draw(),,,,,,,,,1,1,,1,1,,1,1
-local,*index,*item,,,,,,,1,1,1,1,1,1,1,1
-copy,*clock,*scratch,,,,,,,1,,1,1,1,1,,1
-mult,*scratch,0.0013,,,,,,,1,,,,,,,1
-add,*scratch,&item,,,,,,,1,1,,,,,1,1
-sin,*scratch,,,,,,,,,1,1,1,1,1,1,
+,,,,,,,,,,3,3,3,3,3,3,
+,,,,,,,,,3,3,,3,3,,3,3
+# draw(),,,,,,,,,3,3,2,3,3,2,3,3
+local,*index,*item,,,,,,,3,3,3,3,3,3,3,3
+copy,*clock,*scratch,,,,,,,3,,3,3,3,3,,3
+mult,*scratch,0.0013,,,,,,,3,,,,,,,3
+add,*scratch,&item,,,,,,,3,3,1,1,1,1,3,3
+sin,*scratch,,,,,,,,,3,3,3,3,3,3,
 mult,*scratch,24,,,,,,,,,,,,,,
 add,*scratch,29,,,,,,,,,,,,,,
 floor,*scratch,,,,,,,,,,,,,,,
