@@ -23,7 +23,7 @@ const DIRECT = "*";
 const INDIRECT = "&";
 
 const INSTRUCTIONS = `
-clear copy
+noop clear copy
 add sub mult div mod
 and or not xor
 jump if eq gt
@@ -62,8 +62,7 @@ export class CSVM {
     
     // add I/O sheets
     // these should subclass Sheet, typically
-    var stdout = new StdOut();
-    var display = new DisplaySheet();
+    var { stdout = new StdOut(), display = new DisplaySheet() } = options;
     
     // create the program sheet
     var [ sentinel, width ] = program[0];
@@ -127,7 +126,6 @@ export class CSVM {
     if (this.history.length > HISTORY_LENGTH) this.history.shift();
   }
 
-  // TODO: this should probably loop as many times as it can in a given frame budget, say 4ms?
   step() {
     var { cpu, data, display } = this.book.sheets;
     var frame = Date.now();
@@ -197,6 +195,8 @@ export class CSVM {
     this.terminate();
   }
 
+  noop() {}
+
   clear(location) {
     onlyReference(location);
     this.book.clear(location);
@@ -211,50 +211,47 @@ export class CSVM {
     this.book.paste(data, to);
   }
 
-  add(location, value) {
+  /* TODO: this would really benefit from being a decorator */
+  numericalOp(location, value, op) {
     onlyReference(location);
-    var a = this.book.getValues(location);
-    var b = this.book.getValues(value, location);
-    var result = b.map((v, i) => a[i] + v);
+    var castToNumber = v => (typeof v != "number"
+      ? v ? 1 : 0
+      : v);
+
+    var a = this.book.getValues(location).map(castToNumber);
+    var b = this.book.getValues(value, location).map(castToNumber);
+    var result = b.map((v, i) => op(a[i], v));
     this.book.paste(result, location);
   }
 
-  sub(location, value) {
+  numericalOpUnary(location, op) {
     onlyReference(location);
-    var a = this.book.getValues(location);
-    var b = this.book.getValues(value, location);
-    var result = b.map((v, i) => a[i] - v);
-    this.book.paste(result, location);
+    var castToNumber = v => (typeof v != "number"
+      ? v ? 1 : 0
+      : v);
+
+    var a = this.book.getValues(location).map(castToNumber);
+    var result = a.map(op);
+    return this.book.paste(result, location);
   }
 
-  mult(location, value) {
-    onlyReference(location);
-    var a = this.book.getValues(location);
-    var b = this.book.getValues(value, location);
-    var result = b.map((v, i) => a[i] * v);
-    this.book.paste(result, location);
-  }
+  add(location, value) { return this.numericalOp(location, value, (a, b) => a + b) }
 
-  div(location, value) {
-    onlyReference(location);
-    var a = this.book.getValues(location);
-    var b = this.book.getValues(value, location);
-    var result = b.map((v, i) => a[i] / v);
-    this.book.paste(result, location);
-  }
+  sub(location, value) { return this.numericalOp(location, value, (a, b) => a - b) }
 
-  mod(location, value) {
-    onlyReference(location);
-    var a = this.book.getValues(location);
-    var b = this.book.getValues(value, location);
-    var sums = b.map((v, i) => a[i] % v);
-    this.book.paste(sums, location);
-  }
+  mult(location, value) { return this.numericalOp(location, value, (a, b) => a * b) }
 
-  and(location, value) {}
-  or(location, value) {}
-  not(location) {}
-  xor(location, value) {}
+  div(location, value) { return this.numericalOp(location, value, (a, b) => a / b) }
+
+  mod(location, value) { return this.numericalOp(location, value, (a, b) => a % b) }
+
+  and(location, value) { return this.numericalOp(location, value, (a, b) => a & b) }
+
+  or(location, value) { return this.numericalOp(location, value, (a, b) => a | b) }
+
+  xor(location, value) { return this.numericalOp(location, value, (a, b) => a ^ b) }
+
+  not(location) { return this.numericalOpUnary(location, a => ~a ) }
 
   jump(cell) {
     onlyReference(cell);
@@ -269,6 +266,14 @@ export class CSVM {
       condition = this.book.cell(condition);
     }
     if (condition) return this.jump(cell);
+  }
+
+  else(condition, cell) {
+    onlyReference(cell);
+    if (condition instanceof Reference) {
+      condition = this.book.cell(condition);
+    }
+    if (!condition) return this.jump(cell);
   }
 
   eq(a, b, cell) {}
@@ -326,42 +331,24 @@ export class CSVM {
     this.terminate(...pc);
   }
 
-  sin(location) {
-    onlyReference(location);
-    var theta = this.book.cell(location);
-    var result = Math.sin(theta);
-    this.book.cell(location, result);
-  }
+  sin(location) { return this.numericalOpUnary(location, a => Math.sin(a)) }
 
-  cos(location) {
-    onlyReference(location);
-    var theta = this.book.cell(location);
-    var result = Math.cos(theta);
-    this.book.cell(location, result);
-  }
+  cos(location) { return this.numericalOpUnary(location, a => Math.cos(a)) }
 
-  tan(value) {}
+  tan(location) { return this.numericalOpUnary(location, a => Math.tan(a) ) }
+
   dot(a, b) {}
   normal(vector) {}
   mat(a, b, out) {}
-  pow(a, b) {}
+
+  pow(location, value) { return this.numericalOp(location, value, (a, b) => a ** b ) }
+  
   min(range) {}
   max(range) {}
   clamp(value, min, max) {}
   
-  floor(location) {
-    onlyReference(location);
-    var value = this.book.cell(location);
-    var result = Math.floor(value);
-    this.book.cell(location, result);
-  }
+  floor(location) { return this.numericalOpUnary(location, a => Math.floor(a) ) }
 
-  ceil(location) {
-    onlyReference(location);
-    var value = this.book.cell(location);
-    var result = Math.ceil(value);
-    this.book.cell(location, result);
-
-  }
+  ceil(location) { return this.numericalOpUnary(location, a => Math.ceil(a) ) }
 
 }
