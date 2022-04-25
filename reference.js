@@ -38,7 +38,7 @@ export class Reference {
       address = address.replace(sheetRE, "");
       this.sheet = sheetMatch.groups.sheet;
     }
-    var isR1C1 = /^(r\d+c\d+|r\[-?\d+\]c\[-?\d+\])$/i;
+    var isR1C1 = /^r(\[-?\d+\]|\d+)c(\[-?\d+\]|\d+)$/i;
     var pair = address.split(":");
     if (pair.length > 1) {
       var typed = pair.map(p => isR1C1.test(p));
@@ -68,17 +68,15 @@ export class Reference {
   }
 
   parseR1C1(cell) {
-    var isRelative = cell.includes("[");
-    var re = /^r\[?(?<row>-?\d+)\]?c\[?(?<column>-?\d+)\]?$/i
+    var re = /^r(\[(?<rRow>-?\d+)\]|(?<aRow>-?\d+))c(\[?(?<rColumn>-?\d+)\]|(?<aColumn>-?\d+))$/i
     var match = cell.match(re);
     if (!match) throw new Error(`Couldn't parse R1C1-style cell address ${cell}`);
-    var { column, row } = match.groups;
-    column = Number(column);
-    row = Number(row);
-    if (isRelative) {
-      column += this.column;
-      row += this.row;
-    }
+    var column = typeof match.groups.aColumn != "undefined" ?
+      Number(match.groups.aColumn) : 
+      Number(match.groups.rColumn) + this.column;
+    var row = typeof match.groups.aRow != "undefined" ?
+      Number(match.groups.aRow) : 
+      Number(match.groups.rRow) + this.row;
     return { column, row };
   }
 

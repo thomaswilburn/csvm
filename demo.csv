@@ -1,11 +1,11 @@
-csvm,1,17,,,,,,,,,,,,,,,
+csvm,1,17,,,,,,,,,,,,,,
 define,sprite,*J18:Q25,,,,,,,# local reference to our requested cell,,,,,,,
 define,blit,*J5:N5,,,,,,sheet,column,row,ITEM,,,,,
 define,index,*J3:K3,,,,,,,# display pointer for blit,,,,,,,
 define,item,*L3,,,,,,,display,1,1,8,8,,,
 define,scratch,*L8,,,,,,,,,,,,,,
-define,outer,*A9,# eventually this will be a call,,,,,,# sprite locations,,# scratch memory,,,,,
-define,inner,*A11,# loop restart,,,,,,1,,,,,,,
+define,outer,*R[2]C1,# eventually this will be a call,,,,,,# sprite locations,,# scratch memory,,,,,
+define,inner,*R[3]C1,# loop restart,,,,,,1,,,,,,,
 clear,*display!R2C1:R65C64,,# clear the display,,,,,,2,,,,,,,
 pointer,*J8,*I3:M3,# initialize the sprite position pointer,,,,,,3,,,,,,,
 call,*A21,,# call draw(),,,,,,4,,,,,,,
@@ -28,13 +28,13 @@ add,*scratch,29,,,,,,,,,,,,,,
 floor,*scratch,,,,,,,,,,,,,,,
 copy,*scratch,*K5,,,,,,,,,,,,,,
 copy,*clock,*scratch,,,,,,,,,,,,,,
-mult,*scratch,0.0018
-add,*scratch,&item
-cos,*scratch
-mult,*scratch,24
-add,*scratch,29
-floor,*scratch
-copy,*scratch,*L5
+mult,*scratch,0.0018,,,,,,,,,,,,,,
+add,*scratch,&item,,,,,,,,,,,,,,
+cos,*scratch,,,,,,,,,,,,,,,
+mult,*scratch,24,,,,,,,,,,,,,,
+add,*scratch,29,,,,,,,,,,,,,,
+floor,*scratch,,,,,,,,,,,,,,,
+copy,*scratch,*L5,,,,,,,,,,,,,,
 address,*blit,*J6,# create the display sheet destination pointer,,,,,,,,,,,,,
 copy,*sprite,&J6,# blit the sprite,,,,,,,,,,,,,
 return,,,,,,,,,,,,,,,,
