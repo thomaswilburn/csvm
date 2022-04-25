@@ -10,7 +10,7 @@ function cast(value) {
 const DEFAULTS = {
   quote: `"`,
   separator: `,`,
-  ending: `\n`
+  line: `\n`
 };
 
 export default function parse(text, options = {}) {
@@ -33,7 +33,7 @@ export default function parse(text, options = {}) {
   };
 
   options = { ...DEFAULTS, ...options };
-  var { quote, separator, ending } = options;
+  var { quote, separator, line } = options;
 
   for (var i = 0; i < text.length; i++) {
     var char = text[i];
@@ -59,7 +59,7 @@ export default function parse(text, options = {}) {
           finishCell();
           break;
 
-        case ending:
+        case line:
           finishRow();
           break;
 

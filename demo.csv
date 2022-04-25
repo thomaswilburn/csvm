@@ -28,10 +28,10 @@ add,*scratch,29,,,,,,,,,,,,,,
 floor,*scratch,,,,,,,,,,,,,,,
 copy,*scratch,*K5,,,,,,,,,,,,,,
 copy,*clock,*scratch,,,,,,,,,,,,,,
-mult,*scratch,0.0018,
+mult,*scratch,0.0018
 add,*scratch,&item
 cos,*scratch
-mult,*scratch,24,,,,,,,,,,,,,,
+mult,*scratch,24
 add,*scratch,29
 floor,*scratch
 copy,*scratch,*L5

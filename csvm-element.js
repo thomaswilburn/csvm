@@ -34,7 +34,7 @@ var fetchController = Symbol();
 var displayCanvas = Symbol();
 var onResize = Symbol();
 
-class CSVMElement extends HTMLElement {
+export default class CSVMElement extends HTMLElement {
 
   constructor() {
     super();
@@ -80,4 +80,8 @@ class CSVMElement extends HTMLElement {
 
 }
 
-window.customElements.define("csvm-element", CSVMElement);
+try {
+  window.customElements.define("csvm-element", CSVMElement);
+} catch (err) {
+  console.info("CSVM: Wasn't able to auto-define <csv-element>")
+}
