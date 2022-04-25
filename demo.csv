@@ -11,8 +11,8 @@ pointer,*J8,*I3:M3,# initialize the sprite position pointer,,,,,,3,,,,,,,
 call,*A21,,# call draw(),,,,,,4,,,,,,,
 add,*K3,1,# increment the sprite index,,,,,,5,,,,,,,
 local,*index,*item,,,,,,,6,,,,,,,
-if,&item,*inner,,,,,,,7,,,,,,,
-sleep,,,,,,,,,8,,,,,,,
+if,&item,*inner,,,,,,,,,,,,,,
+sleep,,,,,,,,,,,,,,,,
 copy,0,*display!C1,# update the screen,,,,,,,,,,,,,
 jump,*outer,,,,,,,,# sprite data,,,,,,,
 ,,,,,,,,,,1,1,1,1,1,1,
@@ -20,15 +20,21 @@ jump,*outer,,,,,,,,# sprite data,,,,,,,
 # draw(),,,,,,,,,1,1,,1,1,,1,1
 local,*index,*item,,,,,,,1,1,1,1,1,1,1,1
 copy,*clock,*scratch,,,,,,,1,,1,1,1,1,,1
-mult,*scratch,0.001,,,,,,,1,,,,,,,1
+mult,*scratch,0.0013,,,,,,,1,,,,,,,1
 add,*scratch,&item,,,,,,,1,1,,,,,1,1
 sin,*scratch,,,,,,,,,1,1,1,1,1,1,
 mult,*scratch,24,,,,,,,,,,,,,,
-add,*scratch,32,,,,,,,,,,,,,,
+add,*scratch,29,,,,,,,,,,,,,,
 floor,*scratch,,,,,,,,,,,,,,,
 copy,*scratch,*K5,,,,,,,,,,,,,,
-copy,&item,*L5,,,,,,,,,,,,,,
-mult,*L5,7,,,,,,,,,,,,,,
+copy,*clock,*scratch,,,,,,,,,,,,,,
+mult,*scratch,0.0018,
+add,*scratch,&item
+cos,*scratch
+mult,*scratch,24,,,,,,,,,,,,,,
+add,*scratch,29
+floor,*scratch
+copy,*scratch,*L5
 address,*blit,*J6,# create the display sheet destination pointer,,,,,,,,,,,,,
 copy,*sprite,&J6,# blit the sprite,,,,,,,,,,,,,
 return,,,,,,,,,,,,,,,,

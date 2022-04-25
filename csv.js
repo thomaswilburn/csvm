@@ -14,7 +14,7 @@ const DEFAULTS = {
 };
 
 export default function parse(text, options = {}) {
-  text = text.trim();
+  text = text.trim().replace(/\r/g, "")
   var quoting = false;
   var csv = [];
   var row = [];
