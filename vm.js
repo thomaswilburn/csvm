@@ -1,4 +1,5 @@
 import { Sheet, Range, Reference, Workbook } from "./workbook.js";
+var { onlyReference, onlyValue } = Workbook;
 
 // memory-mapped hardware
 import StdOut from "./stdout.js";
@@ -22,6 +23,8 @@ const HISTORY_LENGTH = 10;
 const DIRECT = "*";
 const INDIRECT = "&";
 
+// used for numerical opcodes and allow-listing
+// would be a good use for decorators eventually
 const INSTRUCTIONS = `
 noop clear copy
 add sub mult div mod
@@ -38,8 +41,6 @@ pow abs rand
 min max clamp
 floor ceil
 `.trim().split(/\s+/);
-
-var { onlyReference, onlyValue } = Workbook;
 
 const DEFAULTS = {
   verbose: false
@@ -215,44 +216,6 @@ export class CSVM {
     this.book.paste(data, to);
   }
 
-  // opcode factory functions--eventually these could be decorators
-  static numericalOp(op) {
-    return function(location, value) {
-      onlyReference(location);
-      var castToNumber = v => (typeof v != "number"
-        ? v ? 1 : 0
-        : v);
-
-      var a = this.book.getValues(location).map(castToNumber);
-      var b = this.book.getValues(value, location).map(castToNumber);
-      var result = b.map((v, i) => op(a[i], v));
-      this.book.paste(result, location);
-    }
-  }
-
-  static numericalOpUnary(op) {
-    return function(location) {
-      onlyReference(location);
-      var castToNumber = v => (typeof v != "number"
-        ? v ? 1 : 0
-        : v);
-
-      var a = this.book.getValues(location).map(castToNumber);
-      var result = a.map(op);
-      return this.book.paste(result, location);
-    }
-  }
-
-  add = CSVM.numericalOp((a, b) => a + b)
-  sub = CSVM.numericalOp((a, b) => a - b)
-  mult = CSVM.numericalOp((a, b) => a * b)
-  div = CSVM.numericalOp((a, b) => a / b)
-  mod = CSVM.numericalOp((a, b) => a % b)
-  and = CSVM.numericalOp((a, b) => a & b)
-  or = CSVM.numericalOp((a, b) => a | b)
-  xor = CSVM.numericalOp((a, b) => a ^ b)
-  not = CSVM.numericalOpUnary(a => ~a)
-
   jump(cell) {
     onlyReference(cell);
     if (cell.sheet && cell.sheet != "data") throw new Error("Tried to jump to non-executable memory");
@@ -331,21 +294,60 @@ export class CSVM {
     this.terminate(...pc);
   }
 
-  sin = CSVM.numericalOpUnary(a => Math.sin(a))
-  cos = CSVM.numericalOpUnary(a => Math.cos(a))
-  tan = CSVM.numericalOpUnary(a => Math.tan(a))
 
   dot(a, b) {}
   normal(vector) {}
   mat(a, b, out) {}
-
-  pow = CSVM.numericalOp((a, b) => a ** b )
-  
   min(range) {}
   max(range) {}
   clamp(value, min, max) {}
-  
-  floor = CSVM.numericalOpUnary(a => Math.floor(a))
-  ceil = CSVM.numericalOpUnary(a => Math.ceil(a))
+
+  // opcode factory functions--eventually these could be decorators
+  // until then, they're used to define the opcodes at the bottom
+  static numericalOp(op) {
+    return function(location, value) {
+      onlyReference(location);
+      var castToNumber = v => (typeof v != "number"
+        ? v ? 1 : 0
+        : v);
+
+      var a = this.book.getValues(location).map(castToNumber);
+      var b = this.book.getValues(value, location).map(castToNumber);
+      var result = b.map((v, i) => op(a[i], v));
+      this.book.paste(result, location);
+    }
+  }
+
+  static numericalOpUnary(op) {
+    return function(location) {
+      onlyReference(location);
+      var castToNumber = v => (typeof v != "number"
+        ? v ? 1 : 0
+        : v);
+
+      var a = this.book.getValues(location).map(castToNumber);
+      var result = a.map(op);
+      return this.book.paste(result, location);
+    }
+  }  
 
 }
+
+// factory-generated opcodes
+// public fields end up generating per-instance functions
+// so we'll add them to the prototype here
+CSVM.prototype.add = CSVM.numericalOp((a, b) => a + b);
+CSVM.prototype.sub = CSVM.numericalOp((a, b) => a - b);
+CSVM.prototype.mult = CSVM.numericalOp((a, b) => a * b);
+CSVM.prototype.div = CSVM.numericalOp((a, b) => a / b);
+CSVM.prototype.mod = CSVM.numericalOp((a, b) => a % b);
+CSVM.prototype.and = CSVM.numericalOp((a, b) => a & b);
+CSVM.prototype.or = CSVM.numericalOp((a, b) => a | b);
+CSVM.prototype.xor = CSVM.numericalOp((a, b) => a ^ b);
+CSVM.prototype.not = CSVM.numericalOpUnary(a => ~a);
+CSVM.prototype.pow = CSVM.numericalOp((a, b) => a ** b);
+CSVM.prototype.sin = CSVM.numericalOpUnary(a => Math.sin(a));
+CSVM.prototype.cos = CSVM.numericalOpUnary(a => Math.cos(a));
+CSVM.prototype.tan = CSVM.numericalOpUnary(a => Math.tan(a));
+CSVM.prototype.floor = CSVM.numericalOpUnary(a => Math.floor(a));
+CSVM.prototype.ceil = CSVM.numericalOpUnary(a => Math.ceil(a));
