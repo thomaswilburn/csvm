@@ -47,6 +47,12 @@ const DEFAULTS = {
 };
 
 export class CSVM {
+  // public fields
+  history = [];
+  stack = [];
+  irq = [];
+  namedRanges = {};
+
   constructor(program, options = {}) {
     this.options = { ...DEFAULTS, ...options };
     
@@ -85,8 +91,6 @@ export class CSVM {
     }
     // start execution
     this.running = true;
-    this.history = [];
-    this.stack = [];
     this.step();
   }
 
@@ -135,13 +139,19 @@ export class CSVM {
     var { cpu, data, display } = this.book.sheets;
     var frame = Date.now();
     this.idle = false;
-    while (this.running && !this.idle && Date.now() < frame + FRAME_BUDGET) {
+    while (this.running && !this.idle && (Date.now() < frame + FRAME_BUDGET || this.irq.length)) {
       // set the clock
       cpu.data.set(KEYS.CLOCK, Date.now());
       // set the PC cell for inspection purposes
       var [pcc, pcr] = this.pc;
       cpu.data.set(KEYS.PC_COLUMN, pcc);
       cpu.data.set(KEYS.PC_ROW, pcr);
+
+      // if interrupts remain, immediately jump to them
+      if (this.irq.length) {
+        var sub = this.irq.shift();
+        this.call(sub);
+      }
 
       try {
         // get the current opcode
