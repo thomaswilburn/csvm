@@ -4,20 +4,35 @@ import DisplaySheet from "./display.js";
 
 var template = `
 <style>
-canvas {
-  width: 100%;
+:host {
   display: block;
+  overflow: hidden;
   aspect-ratio: 1 / 1;
-  background: linear-gradient(to bottom right, #888, #898)
+}
+
+.canvas-holder {
+  display: grid;
+  margin: auto;
+  height: 100%;
+  width: 100%;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  background: linear-gradient(to bottom right, #888, #898);
+  margin: auto;
 }
 </style>
-<canvas></canvas>
+<div class="canvas-holder">
+  <canvas></canvas>
+</div>
 `;
 
+// private instance properties
 var fetchController = Symbol();
 var displayCanvas = Symbol();
 var onResize = Symbol();
-var vm = Symbol();
 
 class CSVMElement extends HTMLElement {
 
@@ -56,11 +71,11 @@ class CSVMElement extends HTMLElement {
     var text = await response.text();
     var csv = parse(text);
 
-    if (this[vm]) this[vm].terminate();
+    if (this.vm) this.vm.terminate();
 
     var canvas = this[displayCanvas];
     var display = new DisplaySheet(canvas);
-    this[vm] = new CSVM(csv, { display, verbose: 0 });
+    this.vm = new CSVM(csv, { display, verbose: 0 });
   }
 
 }
