@@ -61,17 +61,21 @@ export class CSVM {
     cpu.setProtected("R1C1:R1C8");
     
     // add I/O sheets
-    // these should subclass Sheet, typically
-    var { stdout = new StdOut(), display = new DisplaySheet() } = options;
+    var { 
+      stdout = new StdOut(),
+      display = new DisplaySheet(),
+      synth = new Sheet() // replace with audio class
+    } = options;
+    synth.oninterrupt = this.call.bind(this);
     
     // create the program sheet
-    var [ sentinel, width ] = program[0];
+    var [ sentinel, version, width ] = program[0];
     if (sentinel != "csvm" || typeof width != "number") throw new Error("Program is missing CSVM metadata");
     var data = new Sheet("data", width, program.length);
     data.grid(program);
     this.verbose(`Program loaded, ${data.columns} columns and ${data.rows} rows`);
 
-    this.book = new Workbook({ cpu, data, stdout, display });
+    this.book = new Workbook({ cpu, data, stdout, display, synth });
     this.namedRanges = {
       stdout: "stdout!A1",
       pcc: "cpu!C1",
