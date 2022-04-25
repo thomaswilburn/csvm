@@ -7,16 +7,10 @@
 
   <body>
 
+    <csvm-element src="./demo.csv"></csvm-element>
+
     <script type="module">
-      import { CSVM } from "./vm.js";
-      import parse from "./csv.js";
-
-      var request = await fetch("./demo.csv");
-      var text = await request.text();
-      var program = parse(text);
-
-      var vm = new CSVM(program, { verbose: 0 });
-      console.log("tick");
+      import "./csvm-element.js";
     </script>
 
   </body>

@@ -1,17 +1,11 @@
 import { Sheet } from "./sheet.js";
 import { Reference } from "./reference.js";
 
-var testCanvas = document.createElement("canvas");
-testCanvas.style.background = "linear-gradient(#888, #999)";
-testCanvas.width = testCanvas.height = 600;
-testCanvas.style.maxWidth = "100%";
-document.body.append(testCanvas);
-var counter = 0;
 // LED refresh interval in ms
 const LCD_LAG = 30;
 
 export default class DisplaySheet extends Sheet {
-  constructor(canvas = testCanvas, width = 64) {
+  constructor(canvas, width = 64) {
     super();
     this.columns = width;
     this.rows = width * 2 + 1;
