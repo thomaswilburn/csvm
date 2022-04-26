@@ -15,7 +15,7 @@ Architecture
 
 The foundational structure of CSVM is a 2D grid of values broadly similar to a spreadsheet in Excel or Google sheets. These grids are used for data storage and program code, but are also used to address memory-mapped I/O to and from the keyboard, screen, and audio synthesizer. In this way, each VM instance is similar to a workbook with an interpreter bolted on top. Typically, within each sheet, the first row is used for configuration and metadata, and is often write-protected.
 
-On boot, CSVM creates a ``cpu``sheet for its own state and operational memory, similar to the registers or stack of a traditional CPU. This sheet may be sized differently depending on the capabilities of the machine, but is no less than 8x8. The first row is marked as read-only, and contains the following cells:
+On boot, CSVM creates a ``cpu`` sheet for its own state and operational memory, similar to the registers or stack of a traditional CPU. This sheet may be sized differently depending on the capabilities of the machine, but is no less than 8x8. The first row is marked as read-only, and contains the following cells:
 
 * The width of the sheet
 * The number of writeable rows available
@@ -141,7 +141,11 @@ Interrupts are treated as function calls, and should return when they're complet
 Input
 -----
 
-Input implementation details go here.
+(not currently implemented)
+
+The input sheet is 4x3 range fed by a keyboard or gamepad. The top row represents the up/down/left/right inputs, the second row are the face buttons, and the third row are the triggers.
+
+When a button is pressed, the cell will be marked as TRUE. When it isn't pressed, the cell will be empty or FALSE.
 
 TODO
 ----
