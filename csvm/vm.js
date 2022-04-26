@@ -4,6 +4,7 @@ var { onlyReference, onlyValue } = Workbook;
 // memory-mapped hardware
 import StdOut from "./io/stdout.js";
 import DisplaySheet from "./io/display.js";
+import SynthSheet from "./io/synth.js";
 
 // direct lookup keys for common known registers
 const KEYS = {
@@ -52,6 +53,7 @@ export class CSVM {
   stack = [];
   irq = [];
   namedRanges = {};
+  interruptFlag = false;
 
   constructor(program, options = {}) {
     this.options = { ...DEFAULTS, ...options };
@@ -71,9 +73,9 @@ export class CSVM {
     var { 
       stdout = new StdOut(),
       display = new DisplaySheet(),
-      synth = new Sheet() // replace with audio class
+      synth = new SynthSheet(4) // replace with audio class
     } = options;
-    synth.oninterrupt = this.call.bind(this);
+    synth.oninterrupt = this.interrupt.bind(this);
     
     // create the program sheet
     var [ sentinel, version, width ] = program[0];
@@ -89,13 +91,15 @@ export class CSVM {
       pcr: "cpu!D1",
       clock: "cpu!E1"
     }
-    // start execution
-    this.running = true;
-    this.step();
 
+    // register kill signal
     window.addEventListener("keydown", e => {
       if (e.key == "c" && e.ctrlKey) this.crash();
     });
+
+    // start execution
+    this.start();
+
   }
 
   verbose(...items) {
@@ -143,19 +147,22 @@ export class CSVM {
     var { cpu, data, display } = this.book.sheets;
     var frame = Date.now();
     this.idle = false;
+
+    // if interrupts remain, immediately jump to them
+    if (this.irq.length) {
+      var sub = this.irq.shift();
+      this.interruptFlag = true;
+      this.call(sub);
+    }
+
     while (this.running && !this.idle && (Date.now() < frame + FRAME_BUDGET || this.irq.length)) {
       // set the clock
       cpu.data.set(KEYS.CLOCK, Date.now());
+
       // set the PC cell for inspection purposes
       var [pcc, pcr] = this.pc;
       cpu.data.set(KEYS.PC_COLUMN, pcc);
       cpu.data.set(KEYS.PC_ROW, pcr);
-
-      // if interrupts remain, immediately jump to them
-      if (this.irq.length) {
-        var sub = this.irq.shift();
-        this.call(sub);
-      }
 
       try {
         // get the current opcode
@@ -192,6 +199,16 @@ export class CSVM {
     if (this.running) tick(this.step);
   }
 
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.step();
+  }
+
+  pause() {
+    this.running = false;
+  }
+
   terminate() {
     this.running = false;
     // any cleanup goes here
@@ -211,6 +228,11 @@ export class CSVM {
     console.log("CPU memory dump follows:");
     this.cpu.print();
     this.terminate();
+  }
+
+  interrupt(address) {
+    var ref = this.copyTransform(1, 1, address);
+    this.irq.push(ref);
   }
 
   noop() {}
@@ -233,6 +255,20 @@ export class CSVM {
     onlyReference(cell);
     if (cell.sheet && cell.sheet != "data") throw new Error("Tried to jump to non-executable memory");
     this.pc = [cell.column, cell.row];
+    return true;
+  }
+  
+  call(address) {
+    this.stack.push(this.pc);
+    return this.jump(address);
+  }
+  
+  return() {
+    if (!this.stack.length) throw new Error("Return from an empty stack!");
+    var [pcc, pcr] = this.stack.pop();
+    if (!this.interruptFlag) pcr++;
+    this.pc = [pcc, pcr];
+    this.interruptFlag = false;
     return true;
   }
 
@@ -270,19 +306,6 @@ export class CSVM {
       b = this.book.cell(b);
     }
     if (a > b) return this.jump(cell);
-  }
-  
-  call(address) {
-    this.stack.push(this.pc);
-    return this.jump(address);
-  }
-  
-  return() {
-    if (!this.stack.length) throw new Error("Return from an empty stack!");
-    var [pcc, pcr] = this.stack.pop();
-    pcr++;
-    this.pc = [pcc, pcr];
-    return true;
   }
 
   pointer(range, dest) {

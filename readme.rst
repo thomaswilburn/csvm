@@ -125,10 +125,16 @@ Display modes are effectively pixel shader presets that take the VRAM values and
 * 1 - Four-shade grayscale, with 0 being "off" and 3 being the darkest shade
 * 2 - "confetti" colors for any non-zero numerical value.
 
-Audio
+Synth
 -----
 
-Audio implementation details go here.
+The ``synth`` sheet offers access to a number of voices. Cell A1 in the sheet will be an indicator of how many voices are available, with a minimum of 4. Each row after that triggers a voice when it is set or edited, with any voice currently playing for that row being silenced. The cells in each row control:
+
+* The waveform of the voice, which is mostly based on what's available in WebAudio: "sine", "square", "sawtooth", "triangle", and "noise"
+* The duration of the note.
+* Starting volume
+* Ending volume (linear interpolation will be used, if this is provided)
+* A cell address to for an interrupt to call when the note ends.
 
 Input
 -----

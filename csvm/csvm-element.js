@@ -33,6 +33,7 @@ canvas {
 var fetchController = Symbol();
 var displayCanvas = Symbol();
 var onResize = Symbol();
+var onVisibility = Symbol();
 
 export default class CSVMElement extends HTMLElement {
 
@@ -44,6 +45,7 @@ export default class CSVMElement extends HTMLElement {
     this[fetchController] = null;
 
     window.addEventListener("resize", this[onResize].bind(this));
+    window.addEventListener("visibilitychange", this[onVisibility].bind(this));
     this[onResize]();
   }
 
@@ -62,7 +64,16 @@ export default class CSVMElement extends HTMLElement {
     c.height = c.offsetWidth;
   }
 
+  [onVisibility](e) {
+    if (document.hidden) {
+      this.vm.pause();
+    } else {
+      this.vm.start();
+    }
+  }
+
   async loadCSV(src) {
+    if (!src) return this.vm.terminate();
     if (this[fetchController]) this[fetchController].abort();
     this[fetchController] = new AbortController();
     var { signal } = this[fetchController];

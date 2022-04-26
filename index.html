@@ -13,10 +13,20 @@ csvm-element {
 
   <body>
 
-    <csvm-element src="./demos/faces.csv"></csvm-element>
+    <button value="./demos/faces.csv">faces.csv</button>
+    <button>Halt VM</button>
+    <csvm-element></csvm-element>
 
     <script type="module">
       import { CSVMElement } from "./csvm/index.js";
+      var vm = document.querySelector("csvm-element");
+
+      var onClickButton = function() {
+        vm.setAttribute("src", this.value);
+      };
+
+      var buttons = document.querySelectorAll("button");
+      buttons.forEach(b => b.addEventListener("click", onClickButton));
     </script>
 
   </body>
