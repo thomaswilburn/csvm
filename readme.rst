@@ -130,11 +130,13 @@ Synth
 
 The ``synth`` sheet offers access to a number of voices. Cell A1 in the sheet will be an indicator of how many voices are available, with a minimum of 4. Each row after that triggers a voice when it is set or edited, with any voice currently playing for that row being silenced. The cells in each row control:
 
-* The waveform of the voice, which is mostly based on what's available in WebAudio: "sine", "square", "sawtooth", "triangle", and "noise"
+* The waveform of the voice, which is mostly based on what's available in WebAudio: "sine", "square", "sawtooth", "triangle"
 * The duration of the note.
 * Starting volume
 * Ending volume (linear interpolation will be used, if this is provided)
 * A cell address to for an interrupt to call when the note ends.
+
+Interrupts are treated as function calls, and should return when they're complete. They can be called at any time, so make sure that you don't collide with any existing values. One interrupt will be called per browser animation frame as long as no other interrupt is currently running.
 
 Input
 -----
@@ -145,9 +147,7 @@ TODO
 ----
 - Build I/O sheets
   - keyboard
-  - audio
-    - 4+ synth voices
-    - each voice gets a row: waveform, frequency, decay rate, duration, interrupt
   - networking?
-- Finish building out instructions
+- add the Noise synth
+- Finish any remaining instructions
 - Write shims for Range and Reference that work in Sheets for the add-on version
