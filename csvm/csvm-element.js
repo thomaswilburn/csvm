@@ -82,6 +82,10 @@ export default class CSVMElement extends HTMLElement {
     var text = await response.text();
     var csv = parse(text);
 
+    this.startVM(csv);    
+  }
+
+  startVM(contents) {
     if (this.vm) this.vm.terminate();
 
     var canvas = this[displayCanvas];
