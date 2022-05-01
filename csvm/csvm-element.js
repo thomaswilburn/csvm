@@ -85,7 +85,7 @@ export default class CSVMElement extends HTMLElement {
     this.startVM(csv);    
   }
 
-  startVM(contents) {
+  startVM(csv) {
     if (this.vm) this.vm.terminate();
 
     var canvas = this[displayCanvas];
